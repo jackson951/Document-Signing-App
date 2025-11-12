@@ -54,15 +54,15 @@ function NotFoundPage() {
           </button>
 
           <button
-            onClick={() => window.open('https://docs.docusign.dev', '_blank')}
-            className="flex flex-col items-center justify-center p-5 bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur-sm rounded-xl border border-gray-700 transition-all group"
-          >
-            <div className="w-12 h-12 rounded-full bg-cyan-900/30 flex items-center justify-center mb-3 group-hover:bg-cyan-800/40 transition-colors">
-              <FileText className="w-6 h-6 text-cyan-400" />
-            </div>
-            <span className="font-medium text-white">API Docs</span>
-            <span className="text-sm text-gray-500 mt-1">Reference & guides</span>
-          </button>
+      onClick={() => navigate("/docs")}
+      className="flex flex-col items-center justify-center p-5 bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur-sm rounded-xl border border-gray-700 transition-all group"
+    >
+      <div className="w-12 h-12 rounded-full bg-cyan-900/30 flex items-center justify-center mb-3 group-hover:bg-cyan-800/40 transition-colors">
+        <FileText className="w-6 h-6 text-cyan-400" />
+      </div>
+      <span className="font-medium text-white">API Docs</span>
+      <span className="text-sm text-gray-500 mt-1">Reference & guides</span>
+    </button>
 
           <button
             onClick={() => window.open('https://support.docusign.dev', '_blank')}
