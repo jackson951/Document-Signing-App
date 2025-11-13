@@ -9,8 +9,6 @@ import {
   Grip, Maximize2, Minimize2, Layers, Grid, Copy, Scissors
 } from 'lucide-react';
 
-
-
 // ===============================
 // 🎨 Enhanced Reusable Components
 // ===============================
@@ -109,70 +107,69 @@ const Tooltip = ({ children, content, position = 'top' }) => {
   );
 };
 
+// Field types configuration - MOVED OUTSIDE COMPONENT
+const fieldTypes = {
+  SIGNATURE: { 
+    label: 'Signature', 
+    color: 'border-blue-400 bg-blue-500/20', 
+    icon: Signature,
+    defaultWidth: 200,
+    defaultHeight: 60
+  },
+  INITIALS: { 
+    label: 'Initials', 
+    color: 'border-green-400 bg-green-500/20', 
+    icon: Type,
+    defaultWidth: 100,
+    defaultHeight: 40
+  },
+  DATE: { 
+    label: 'Date', 
+    color: 'border-purple-400 bg-purple-500/20', 
+    icon: Calendar,
+    defaultWidth: 150,
+    defaultHeight: 40
+  },
+  TEXT: { 
+    label: 'Text', 
+    color: 'border-orange-400 bg-orange-500/20', 
+    icon: Type,
+    defaultWidth: 200,
+    defaultHeight: 40
+  },
+  NAME: {
+    label: 'Name',
+    color: 'border-cyan-400 bg-cyan-500/20',
+    icon: Type,
+    defaultWidth: 200,
+    defaultHeight: 40
+  },
+  COMPANY: {
+    label: 'Company',
+    color: 'border-pink-400 bg-pink-500/20',
+    icon: Type,
+    defaultWidth: 200,
+    defaultHeight: 40
+  },
+  TITLE: {
+    label: 'Title',
+    color: 'border-yellow-400 bg-yellow-500/20',
+    icon: Type,
+    defaultWidth: 200,
+    defaultHeight: 40
+  },
+  EMAIL: {
+    label: 'Email',
+    color: 'border-indigo-400 bg-indigo-500/20',
+    icon: Mail,
+    defaultWidth: 250,
+    defaultHeight: 40
+  }
+};
+
 // ===============================
 // 🎯 Enhanced PDF Viewer with Advanced Field Placement
 // ===============================
-
-// Field types configuration
-  const fieldTypes = {
-    SIGNATURE: { 
-      label: 'Signature', 
-      color: 'border-blue-400 bg-blue-500/20', 
-      icon: Signature,
-      defaultWidth: 200,
-      defaultHeight: 60
-    },
-    INITIALS: { 
-      label: 'Initials', 
-      color: 'border-green-400 bg-green-500/20', 
-      icon: Type,
-      defaultWidth: 100,
-      defaultHeight: 40
-    },
-    DATE: { 
-      label: 'Date', 
-      color: 'border-purple-400 bg-purple-500/20', 
-      icon: Calendar,
-      defaultWidth: 150,
-      defaultHeight: 40
-    },
-    TEXT: { 
-      label: 'Text', 
-      color: 'border-orange-400 bg-orange-500/20', 
-      icon: Type,
-      defaultWidth: 200,
-      defaultHeight: 40
-    },
-    NAME: {
-      label: 'Name',
-      color: 'border-cyan-400 bg-cyan-500/20',
-      icon: Type,
-      defaultWidth: 200,
-      defaultHeight: 40
-    },
-    COMPANY: {
-      label: 'Company',
-      color: 'border-pink-400 bg-pink-500/20',
-      icon: Type,
-      defaultWidth: 200,
-      defaultHeight: 40
-    },
-    TITLE: {
-      label: 'Title',
-      color: 'border-yellow-400 bg-yellow-500/20',
-      icon: Type,
-      defaultWidth: 200,
-      defaultHeight: 40
-    },
-    EMAIL: {
-      label: 'Email',
-      color: 'border-indigo-400 bg-indigo-500/20',
-      icon: Mail,
-      defaultWidth: 250,
-      defaultHeight: 40
-    }
-  };
-
 
 const AdvancedPDFViewer = ({ 
   file, 
@@ -210,7 +207,6 @@ const AdvancedPDFViewer = ({
   const canvasRef = useRef();
   const pdfDocRef = useRef();
 
-  
   // Enhanced field templates
   const fieldTemplates = [
     { type: 'SIGNATURE', label: 'Signature', icon: Signature },
@@ -300,48 +296,101 @@ const AdvancedPDFViewer = ({
     }
   };
 
-  // Field placement handlers
+  // FIXED: Enhanced drag and drop handlers
   const handleFieldDragStart = (fieldType, event) => {
     if (!selectedSignerId || mode !== 'placement') return;
     
-    event.preventDefault();
-    const fieldConfig = fieldTypes[fieldType];
+    event.dataTransfer.setData('application/field-type', fieldType);
+    event.dataTransfer.effectAllowed = 'copy';
     
-    setCurrentField({
-      id: `temp-${Date.now()}`,
-      type: fieldType,
-      signerId: selectedSignerId,
-      pageNumber: currentPage,
-      x: 50,
-      y: 50,
-      width: fieldConfig.defaultWidth,
-      height: fieldConfig.defaultHeight,
-      isDragging: true
-    });
+    // Visual feedback
+    event.currentTarget.style.opacity = '0.4';
   };
 
-  const handlePageMouseDown = (event) => {
-    if (mode !== 'placement' || !currentField) return;
+  const handleDragOver = (event) => {
+    if (!selectedSignerId || mode !== 'placement') return;
     
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    
+    if (!selectedSignerId || mode !== 'placement') return;
+
+    const fieldType = event.dataTransfer.getData('application/field-type');
+    if (!fieldType) return;
+
     const pageElement = containerRef.current?.querySelector('.pdf-page-container');
     if (!pageElement) return;
 
     const rect = pageElement.getBoundingClientRect();
+    
+    // Calculate position relative to PDF page
     const x = (event.clientX - rect.left) / scale;
     const y = (event.clientY - rect.top) / scale;
 
-    setDragStart({ x, y });
-    setCurrentField(prev => ({
-      ...prev,
-      x,
-      y,
-      width: fieldTypes[prev.type].defaultWidth,
-      height: fieldTypes[prev.type].defaultHeight
-    }));
+    const fieldConfig = fieldTypes[fieldType];
+    
+    // Create new field at drop position
+    const newField = {
+      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: fieldType,
+      signerId: selectedSignerId,
+      pageNumber: currentPage,
+      x: Math.max(0, x - fieldConfig.defaultWidth / 2), // Center the field on drop position
+      y: Math.max(0, y - fieldConfig.defaultHeight / 2),
+      width: fieldConfig.defaultWidth,
+      height: fieldConfig.defaultHeight,
+      createdAt: new Date().toISOString()
+    };
+
+    onFieldAdd(newField);
+    
+    // Reset drag visual
+    const draggedElement = document.querySelector('[draggable]');
+    if (draggedElement) {
+      draggedElement.style.opacity = '1';
+    }
+  };
+
+  const handleDragEnd = (event) => {
+    // Reset visual feedback
+    event.currentTarget.style.opacity = '1';
+  };
+
+  // FIXED: Enhanced click-and-drag field creation
+  const handleMouseDown = (event) => {
+    if (mode !== 'placement' || !selectedSignerId || !selectedFieldType) return;
+    if (event.target.closest('.field-container')) return; // Don't interfere with existing fields
+
+    const pageElement = containerRef.current?.querySelector('.pdf-page-container');
+    if (!pageElement) return;
+
+    const rect = pageElement.getBoundingClientRect();
+    const startX = (event.clientX - rect.left) / scale;
+    const startY = (event.clientY - rect.top) / scale;
+
+    const fieldConfig = fieldTypes[selectedFieldType];
+    
+    setCurrentField({
+      id: `temp-${Date.now()}`,
+      type: selectedFieldType,
+      signerId: selectedSignerId,
+      pageNumber: currentPage,
+      x: startX,
+      y: startY,
+      width: fieldConfig.defaultWidth,
+      height: fieldConfig.defaultHeight,
+      isDragging: true
+    });
+    
+    setDragStart({ x: startX, y: startY });
     setIsDragging(true);
   };
 
-  const handlePageMouseMove = (event) => {
+  const handleMouseMove = (event) => {
     if (!isDragging || !currentField || !dragStart) return;
 
     const pageElement = containerRef.current?.querySelector('.pdf-page-container');
@@ -361,7 +410,7 @@ const AdvancedPDFViewer = ({
     }));
   };
 
-  const handlePageMouseUp = () => {
+  const handleMouseUp = () => {
     if (isDragging && currentField && dragStart) {
       // Validate field placement (must be within page bounds)
       const currentPageData = pdfImages[currentPage - 1];
@@ -556,11 +605,10 @@ const AdvancedPDFViewer = ({
   useEffect(() => {
     const handleGlobalMouseMove = (event) => {
       if (isDragging && currentField) {
-        handlePageMouseMove(event);
+        handleMouseMove(event);
       }
       
       if (isResizing && selectedField && resizeDirection) {
-        // Handle resize logic here
         const field = signatureFields.find(f => f.id === selectedField);
         if (!field) return;
 
@@ -577,7 +625,7 @@ const AdvancedPDFViewer = ({
 
     const handleGlobalMouseUp = () => {
       if (isDragging) {
-        handlePageMouseUp();
+        handleMouseUp();
       }
       if (isResizing) {
         setIsResizing(false);
@@ -716,7 +764,7 @@ const AdvancedPDFViewer = ({
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Field Templates
+                Field Type
               </label>
               <select
                 value={selectedFieldType || ''}
@@ -757,7 +805,8 @@ const AdvancedPDFViewer = ({
                       key={template.type}
                       draggable
                       onDragStart={(e) => handleFieldDragStart(template.type, e)}
-                      className="flex items-center gap-2 px-3 py-2 border border-gray-600 rounded-lg cursor-grab bg-gray-700 hover:bg-gray-600 transition-colors"
+                      onDragEnd={handleDragEnd}
+                      className="flex items-center gap-2 px-3 py-2 border border-gray-600 rounded-lg cursor-grab bg-gray-700 hover:bg-gray-600 active:cursor-grabbing transition-all duration-200"
                     >
                       <template.icon className="w-4 h-4" />
                       <span className="text-sm text-white">{template.label}</span>
@@ -776,6 +825,8 @@ const AdvancedPDFViewer = ({
         className={`border border-gray-700 rounded-lg overflow-auto bg-gray-900 relative transition-all ${
           isFullscreen ? 'fixed inset-4 z-50' : 'max-h-96 min-h-96'
         }`}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         {isLoading && (
           <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10">
@@ -814,7 +865,7 @@ const AdvancedPDFViewer = ({
               margin: '0 auto',
               cursor: isDragging ? 'grabbing' : (mode === 'placement' && selectedSignerId && selectedFieldType) ? 'crosshair' : 'default'
             }}
-            onMouseDown={handlePageMouseDown}
+            onMouseDown={handleMouseDown}
           >
             {/* Grid Overlay */}
             {showGrid && (
@@ -1126,40 +1177,50 @@ export default function CreateDocumentPage() {
     }
   }, [location.state]);
 
-  // Enhanced field history management
+  // FIXED: Enhanced field history management
   const saveToHistory = useCallback((fields) => {
     const newHistory = fieldHistory.slice(0, historyIndex + 1);
-    newHistory.push(fields);
+    newHistory.push(JSON.parse(JSON.stringify(fields))); // Deep clone
     setFieldHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   }, [fieldHistory, historyIndex]);
 
   const undoFieldChange = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setSignatureFields([...fieldHistory[historyIndex - 1]]);
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setSignatureFields(JSON.parse(JSON.stringify(fieldHistory[newIndex])));
     }
   }, [historyIndex, fieldHistory]);
 
   const redoFieldChange = useCallback(() => {
     if (historyIndex < fieldHistory.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setSignatureFields([...fieldHistory[historyIndex + 1]]);
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setSignatureFields(JSON.parse(JSON.stringify(fieldHistory[newIndex])));
     }
   }, [historyIndex, fieldHistory]);
 
-  // Enhanced field operations with history
+  // FIXED: Enhanced field operations with history
   const handleAddSignatureField = useCallback((field) => {
     const newField = { 
       ...field, 
       id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      // Ensure signerId is properly set
+      signerId: field.signerId || selectedSignerId
     };
     
     const newFields = [...signatureFields, newField];
     setSignatureFields(newFields);
     saveToHistory(newFields);
-  }, [signatureFields, saveToHistory]);
+    console.log('Field added:', newField);
+    console.log('Total fields:', newFields.length);
+    console.log('Fields by signer:', newFields.reduce((acc, f) => {
+      acc[f.signerId] = (acc[f.signerId] || 0) + 1;
+      return acc;
+    }, {}));
+  }, [signatureFields, saveToHistory, selectedSignerId]);
 
   const handleUpdateSignatureField = useCallback((fieldId, updates) => {
     const newFields = signatureFields.map(field => 
@@ -1250,8 +1311,16 @@ export default function CreateDocumentPage() {
     }
   }, [formData.signers, signatureFields, selectedSignerId, saveToHistory]);
 
-  // Enhanced field validation
+  // FIXED: Enhanced field validation
   const validateForm = useCallback(() => {
+    console.log('Validating form...');
+    console.log('Signers:', formData.signers);
+    console.log('Signature fields:', signatureFields);
+    console.log('Fields by signer:', signatureFields.reduce((acc, f) => {
+      acc[f.signerId] = (acc[f.signerId] || 0) + 1;
+      return acc;
+    }, {}));
+
     // Validate signers
     const invalidSigners = formData.signers.filter(signer => !signer.name.trim() || !signer.email.trim());
     if (invalidSigners.length > 0) {
@@ -1274,10 +1343,15 @@ export default function CreateDocumentPage() {
     }
 
     // Validate that each signer has at least one field
-    const signersWithFields = new Set(signatureFields.map(field => field.signerId));
-    const signersWithoutFields = formData.signers.filter(signer => !signersWithFields.has(signer.id));
+    const signersWithFields = new Set(signatureFields.map(field => parseInt(field.signerId)));
+    const signersWithoutFields = formData.signers.filter(signer => !signersWithFields.has(parseInt(signer.id)));
+    
+    console.log('Signers with fields:', Array.from(signersWithFields));
+    console.log('Signers without fields:', signersWithoutFields.map(s => s.id));
+
     if (signersWithoutFields.length > 0) {
-      setError(`The following signers have no signature fields: ${signersWithoutFields.map(s => s.name || `Signer ${s.id}`).join(', ')}`);
+      const signerNames = signersWithoutFields.map(s => s.name || `Signer ${s.id}`).join(', ');
+      setError(`The following signers have no signature fields: ${signerNames}. Please place at least one field for each signer.`);
       return false;
     }
 
@@ -1362,8 +1436,13 @@ export default function CreateDocumentPage() {
     }
   };
 
+  // FIXED: Enhanced envelope creation with proper field saving
   const handleCreateEnvelope = async () => {
+    console.log('Creating envelope...');
+    console.log('Current signature fields:', signatureFields);
+    
     if (!validateForm()) {
+      console.log('Validation failed');
       return;
     }
 
@@ -1410,8 +1489,14 @@ export default function CreateDocumentPage() {
           })
         });
 
-        if (!response.ok) throw new Error('Failed to update envelope');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to update envelope');
+        }
         envelope = await response.json();
+        
+        // Save signature fields AFTER envelope update
+        await saveSignatureFields(envelope.id);
       } else {
         // Create new envelope
         const response = await fetch('http://localhost:3000/api/v1/envelopes', {
@@ -1434,13 +1519,16 @@ export default function CreateDocumentPage() {
           })
         });
 
-        if (!response.ok) throw new Error('Failed to create envelope');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to create envelope');
+        }
         envelope = await response.json();
         setCreatedEnvelope(envelope);
+        
+        // Save signature fields AFTER envelope creation
+        await saveSignatureFields(envelope.id);
       }
-
-      // Save signature fields
-      await saveSignatureFields(envelope.id);
       
       setStep(3);
       setSuccess(`Envelope ${isEditMode ? 'updated' : 'created'} successfully!`);
@@ -1454,12 +1542,41 @@ export default function CreateDocumentPage() {
     }
   };
 
+  // FIXED: Enhanced signature field saving
   const saveSignatureFields = async (envelopeId) => {
     try {
-      if (signatureFields.length === 0) return;
+      if (signatureFields.length === 0) {
+        console.warn('No signature fields to save');
+        return;
+      }
 
       const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
       const token = localStorage.getItem('token');
+
+      // Prepare fields data with proper validation
+      const fieldsToSave = signatureFields.map(field => {
+        // Ensure all required properties exist and have valid values
+        return {
+          signerId: parseInt(field.signerId),
+          pageNumber: field.pageNumber || 1,
+          x: Math.max(0, Math.round(field.x)),
+          y: Math.max(0, Math.round(field.y)),
+          width: Math.max(50, Math.round(field.width)), // Minimum width
+          height: Math.max(30, Math.round(field.height)), // Minimum height
+          type: field.type || 'SIGNATURE',
+          required: true,
+          metadata: {
+            createdAt: field.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        };
+      });
+
+      console.log('Saving signature fields:', {
+        envelopeId,
+        fieldCount: fieldsToSave.length,
+        fields: fieldsToSave
+      });
 
       const response = await fetch('http://localhost:3000/api/v1/signature-fields', {
         method: 'POST',
@@ -1469,30 +1586,21 @@ export default function CreateDocumentPage() {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          envelopeId,
-          fields: signatureFields.map(field => ({
-            signerId: field.signerId,
-            pageNumber: field.pageNumber,
-            x: Math.round(field.x),
-            y: Math.round(field.y),
-            width: Math.round(field.width),
-            height: Math.round(field.height),
-            type: field.type,
-            required: true,
-            metadata: {
-              createdAt: field.createdAt,
-              updatedAt: field.updatedAt
-            }
-          }))
+          signingRequestId:envelopeId,
+          fields: fieldsToSave
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to save signature fields');
+        const errorText = await response.text();
+        console.error('Server response error:', errorText);
+        throw new Error(`Failed to save signature fields: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log('Signature fields saved successfully:', result);
+      return result;
+
     } catch (error) {
       console.error('Error saving signature fields:', error);
       throw error;
@@ -1577,7 +1685,8 @@ export default function CreateDocumentPage() {
       stats.byType[field.type] = (stats.byType[field.type] || 0) + 1;
       
       // Count by signer
-      stats.bySigner[field.signerId] = (stats.bySigner[field.signerId] || 0) + 1;
+      const signerId = parseInt(field.signerId);
+      stats.bySigner[signerId] = (stats.bySigner[signerId] || 0) + 1;
       
       // Count by page
       stats.byPage[field.pageNumber] = (stats.byPage[field.pageNumber] || 0) + 1;
@@ -1588,8 +1697,12 @@ export default function CreateDocumentPage() {
 
   const fieldStats = getFieldStatistics();
 
-  // Enhanced rendering functions...
-  // [Previous rendering functions remain largely the same but enhanced with new features]
+  // Auto-select first signer when component mounts
+  useEffect(() => {
+    if (formData.signers.length > 0 && !selectedSignerId) {
+      setSelectedSignerId(formData.signers[0].id);
+    }
+  }, [formData.signers, selectedSignerId]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
@@ -2309,4 +2422,4 @@ export default function CreateDocumentPage() {
       </main>
     </div>
   );
-}
+};
