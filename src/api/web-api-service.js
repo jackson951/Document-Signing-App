@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { checkTokenExpiration, logoutUser } from "./auth";
 
 // Set your API base URL here
-const BASE_URL = "https://localhost:30000/api/v1";
+const BASE_URL = "https://localhost:3000/api/v1";
 
 // Create an Axios instance
 export const ApiService = axios.create({

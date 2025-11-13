@@ -5,31 +5,39 @@ import {
   Upload, FileText, Users, Mail, Settings, X, Plus, Trash2,
   Download, Eye, Save, ArrowLeft, AlertCircle, CheckCircle,
   Clock, Calendar, MapPin, Signature, Type, Image, Send, Info, Edit, Loader,
-  MousePointer, Square, Move, ZoomIn, ZoomOut, RotateCcw, ExternalLink
+  MousePointer, Square, Move, ZoomIn, ZoomOut, RotateCcw, ExternalLink,
+  Grip, Maximize2, Minimize2, Layers, Grid, Copy, Scissors
 } from 'lucide-react';
 
+
+
 // ===============================
-// 🎨 Reusable Components
+// 🎨 Enhanced Reusable Components
 // ===============================
 
-const Card = ({ children, className = '' }) => (
-  <div className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6 ${className}`}>
+const Card = ({ children, className = '', ...props }) => (
+  <div 
+    className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6 ${className}`}
+    {...props}
+  >
     {children}
   </div>
 );
 
 const Button = ({ children, variant = 'primary', size = 'default', ...props }) => {
-  const baseClasses = "rounded-lg font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses = "rounded-lg font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900";
   const sizeClasses = {
-    default: "px-4 py-2.5",
-    sm: "px-3 py-1.5 text-sm"
+    default: "px-4 py-2.5 text-sm",
+    sm: "px-3 py-1.5 text-xs",
+    lg: "px-6 py-3 text-base"
   };
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
-    secondary: "bg-gray-700 hover:bg-gray-600 text-gray-100",
-    outline: "border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white",
-    danger: "bg-red-600 hover:bg-red-700 text-white",
-    success: "bg-green-600 hover:bg-green-700 text-white"
+    primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25",
+    secondary: "bg-gray-700 hover:bg-gray-600 text-gray-100 shadow-sm",
+    outline: "border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white bg-transparent",
+    danger: "bg-red-600 hover:bg-red-700 text-white shadow-sm",
+    success: "bg-green-600 hover:bg-green-700 text-white shadow-sm",
+    warning: "bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
   };
   
   return (
@@ -39,7 +47,7 @@ const Button = ({ children, variant = 'primary', size = 'default', ...props }) =
   );
 };
 
-const Input = ({ label, error, ...props }) => (
+const Input = ({ label, error, helper, ...props }) => (
   <div className="space-y-2">
     {label && <label className="block text-sm font-medium text-gray-300">{label}</label>}
     <input
@@ -47,10 +55,11 @@ const Input = ({ label, error, ...props }) => (
       {...props}
     />
     {error && <p className="text-red-400 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{error}</p>}
+    {helper && !error && <p className="text-gray-500 text-sm">{helper}</p>}
   </div>
 );
 
-const Select = ({ label, options, error, ...props }) => (
+const Select = ({ label, options, error, helper, ...props }) => (
   <div className="space-y-2">
     {label && <label className="block text-sm font-medium text-gray-300">{label}</label>}
     <select
@@ -58,57 +67,166 @@ const Select = ({ label, options, error, ...props }) => (
       {...props}
     >
       {options.map(option => (
-        <option key={option.value} value={option.value}>
+        <option key={option.value} value={option.value} disabled={option.disabled}>
           {option.label}
         </option>
       ))}
     </select>
     {error && <p className="text-red-400 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{error}</p>}
+    {helper && !error && <p className="text-gray-500 text-sm">{helper}</p>}
   </div>
 );
 
+const Tooltip = ({ children, content, position = 'top' }) => {
+  const [visible, setVisible] = useState(false);
+  
+  const positionClasses = {
+    top: 'bottom-full left-1/2 transform -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 transform -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 transform -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 transform -translate-y-1/2 ml-2'
+  };
+
+  return (
+    <div 
+      className="relative inline-block"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div className={`absolute z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-xl border border-gray-700 whitespace-nowrap ${positionClasses[position]}`}>
+          {content}
+          <div className={`absolute w-2 h-2 bg-gray-900 transform rotate-45 border border-gray-700 ${
+            position === 'top' ? 'top-full -translate-x-1/2 border-t-0 border-l-0' :
+            position === 'bottom' ? 'bottom-full -translate-x-1/2 border-b-0 border-r-0' :
+            position === 'left' ? 'left-full -translate-y-1/2 border-l-0 border-b-0' :
+            'right-full -translate-y-1/2 border-r-0 border-t-0'
+          }`} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ===============================
-// 📄 CUSTOM PDF VIEWER - NO EXTERNAL DEPENDENCIES
+// 🎯 Enhanced PDF Viewer with Advanced Field Placement
 // ===============================
 
-const CustomPDFViewer = ({ 
+// Field types configuration
+  const fieldTypes = {
+    SIGNATURE: { 
+      label: 'Signature', 
+      color: 'border-blue-400 bg-blue-500/20', 
+      icon: Signature,
+      defaultWidth: 200,
+      defaultHeight: 60
+    },
+    INITIALS: { 
+      label: 'Initials', 
+      color: 'border-green-400 bg-green-500/20', 
+      icon: Type,
+      defaultWidth: 100,
+      defaultHeight: 40
+    },
+    DATE: { 
+      label: 'Date', 
+      color: 'border-purple-400 bg-purple-500/20', 
+      icon: Calendar,
+      defaultWidth: 150,
+      defaultHeight: 40
+    },
+    TEXT: { 
+      label: 'Text', 
+      color: 'border-orange-400 bg-orange-500/20', 
+      icon: Type,
+      defaultWidth: 200,
+      defaultHeight: 40
+    },
+    NAME: {
+      label: 'Name',
+      color: 'border-cyan-400 bg-cyan-500/20',
+      icon: Type,
+      defaultWidth: 200,
+      defaultHeight: 40
+    },
+    COMPANY: {
+      label: 'Company',
+      color: 'border-pink-400 bg-pink-500/20',
+      icon: Type,
+      defaultWidth: 200,
+      defaultHeight: 40
+    },
+    TITLE: {
+      label: 'Title',
+      color: 'border-yellow-400 bg-yellow-500/20',
+      icon: Type,
+      defaultWidth: 200,
+      defaultHeight: 40
+    },
+    EMAIL: {
+      label: 'Email',
+      color: 'border-indigo-400 bg-indigo-500/20',
+      icon: Mail,
+      defaultWidth: 250,
+      defaultHeight: 40
+    }
+  };
+
+
+const AdvancedPDFViewer = ({ 
   file, 
   signers, 
   signatureFields, 
   onFieldAdd, 
   onFieldUpdate, 
   onFieldRemove,
+  onFieldSelect,
   selectedSignerId,
   onSignerSelect,
   selectedFieldType,
   onFieldTypeSelect,
-  mode = 'placement'
+  selectedFieldId,
+  mode = 'placement',
+  className = ''
 }) => {
   const [pdfPages, setPdfPages] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [scale, setScale] = useState(1.2);
+  const [scale, setScale] = useState(1.0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [currentField, setCurrentField] = useState(null);
   const [pdfImages, setPdfImages] = useState([]);
+  const [showGrid, setShowGrid] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState(null);
 
   const containerRef = useRef();
-  const fileInputRef = useRef();
+  const canvasRef = useRef();
+  const pdfDocRef = useRef();
 
-  // Field types configuration
-  const fieldTypes = {
-    SIGNATURE: { label: 'Signature', color: 'border-blue-400 bg-blue-500/20', icon: Signature },
-    INITIALS: { label: 'Initials', color: 'border-green-400 bg-green-500/20', icon: Type },
-    DATE: { label: 'Date', color: 'border-purple-400 bg-purple-500/20', icon: Calendar },
-    TEXT: { label: 'Text', color: 'border-orange-400 bg-orange-500/20', icon: Type }
-  };
+  
+  // Enhanced field templates
+  const fieldTemplates = [
+    { type: 'SIGNATURE', label: 'Signature', icon: Signature },
+    { type: 'INITIALS', label: 'Initials', icon: Type },
+    { type: 'DATE', label: 'Date Signed', icon: Calendar },
+    { type: 'NAME', label: 'Full Name', icon: Type },
+    { type: 'EMAIL', label: 'Email', icon: Mail },
+    { type: 'COMPANY', label: 'Company', icon: Type },
+    { type: 'TITLE', label: 'Title', icon: Type },
+    { type: 'TEXT', label: 'Custom Text', icon: Type }
+  ];
 
   // Reset when file changes
   useEffect(() => {
     if (file) {
-      loadPDFPreview();
+      loadPDFWithPDFJS();
     } else {
       setPdfImages([]);
       setTotalPages(0);
@@ -117,40 +235,8 @@ const CustomPDFViewer = ({
     }
   }, [file]);
 
-  // Simple PDF preview using object URL
-  const loadPDFPreview = async () => {
-    if (!file) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // For uploaded files, create object URL
-      let pdfUrl;
-      if (file instanceof File) {
-        pdfUrl = URL.createObjectURL(file);
-      } else if (file.url) {
-        // For existing documents, use the URL directly
-        pdfUrl = `http://localhost:3000${file.url}`;
-      } else {
-        throw new Error('Invalid file format');
-      }
-
-      // Create iframe for PDF preview
-      setPdfImages([pdfUrl]);
-      setTotalPages(1); // We'll assume 1 page for simplicity
-      setCurrentPage(1);
-
-    } catch (err) {
-      console.error('PDF loading error:', err);
-      setError('Failed to load PDF. Please ensure it\'s a valid PDF file.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Alternative: Use canvas to render PDF pages (more advanced)
-  const loadPDFWithCanvas = async () => {
+  // Enhanced PDF loading with PDF.js
+  const loadPDFWithPDFJS = async () => {
     if (!file) return;
 
     setIsLoading(true);
@@ -161,7 +247,6 @@ const CustomPDFViewer = ({
       const pdfjsLib = await import('pdfjs-dist/build/pdf');
       const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
 
-      // Set worker path
       pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
       let pdfData;
@@ -172,76 +257,102 @@ const CustomPDFViewer = ({
         const response = await fetch(`http://localhost:3000${file.url}`);
         const arrayBuffer = await response.arrayBuffer();
         pdfData = arrayBuffer;
+      } else {
+        throw new Error('Invalid file format');
       }
 
       const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+      pdfDocRef.current = pdf;
       setTotalPages(pdf.numPages);
 
-      // Render first page as preview
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 1.5 });
+      // Render all pages
+      const pages = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
 
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
 
-      await page.render({
-        canvasContext: context,
-        viewport: viewport
-      }).promise;
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
 
-      const imageUrl = canvas.toDataURL();
-      setPdfImages([imageUrl]);
+        pages.push({
+          imageUrl: canvas.toDataURL(),
+          width: viewport.width,
+          height: viewport.height,
+          pageNumber: i
+        });
+      }
+
+      setPdfImages(pages);
+      setCurrentPage(1);
 
     } catch (err) {
       console.error('PDF.js loading error:', err);
-      // Fallback to simple object URL method
-      loadPDFPreview();
+      setError('Failed to load PDF document. Please ensure it\'s a valid PDF file.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePageClick = (event, pageIndex) => {
-    if (mode !== 'placement' || !selectedSignerId || !selectedFieldType) return;
+  // Field placement handlers
+  const handleFieldDragStart = (fieldType, event) => {
+    if (!selectedSignerId || mode !== 'placement') return;
+    
+    event.preventDefault();
+    const fieldConfig = fieldTypes[fieldType];
+    
+    setCurrentField({
+      id: `temp-${Date.now()}`,
+      type: fieldType,
+      signerId: selectedSignerId,
+      pageNumber: currentPage,
+      x: 50,
+      y: 50,
+      width: fieldConfig.defaultWidth,
+      height: fieldConfig.defaultHeight,
+      isDragging: true
+    });
+  };
 
-    const pageElement = containerRef.current?.querySelector('.pdf-page');
+  const handlePageMouseDown = (event) => {
+    if (mode !== 'placement' || !currentField) return;
+    
+    const pageElement = containerRef.current?.querySelector('.pdf-page-container');
     if (!pageElement) return;
 
-    const pageRect = pageElement.getBoundingClientRect();
-    const x = (event.clientX - pageRect.left) / scale;
-    const y = (event.clientY - pageRect.top) / scale;
+    const rect = pageElement.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / scale;
+    const y = (event.clientY - rect.top) / scale;
 
-    // Create new field
-    const newField = {
-      id: `field-${Date.now()}`,
-      pageNumber: pageIndex + 1,
+    setDragStart({ x, y });
+    setCurrentField(prev => ({
+      ...prev,
       x,
       y,
-      width: 150,
-      height: 40,
-      type: selectedFieldType,
-      signerId: selectedSignerId,
-      temporary: true
-    };
-
-    setCurrentField(newField);
+      width: fieldTypes[prev.type].defaultWidth,
+      height: fieldTypes[prev.type].defaultHeight
+    }));
     setIsDragging(true);
   };
 
-  const handleMouseMove = (event) => {
-    if (!isDragging || !currentField || mode !== 'placement') return;
+  const handlePageMouseMove = (event) => {
+    if (!isDragging || !currentField || !dragStart) return;
 
-    const pageElement = containerRef.current?.querySelector('.pdf-page');
+    const pageElement = containerRef.current?.querySelector('.pdf-page-container');
     if (!pageElement) return;
 
-    const pageRect = pageElement.getBoundingClientRect();
-    const currentX = (event.clientX - pageRect.left) / scale;
-    const currentY = (event.clientY - pageRect.top) / scale;
+    const rect = pageElement.getBoundingClientRect();
+    const currentX = (event.clientX - rect.left) / scale;
+    const currentY = (event.clientY - rect.top) / scale;
 
-    const width = Math.max(80, currentX - currentField.x);
-    const height = Math.max(30, currentY - currentField.y);
+    const width = Math.max(fieldTypes[currentField.type].defaultWidth, currentX - dragStart.x);
+    const height = Math.max(fieldTypes[currentField.type].defaultHeight, currentY - dragStart.y);
 
     setCurrentField(prev => ({
       ...prev,
@@ -250,114 +361,351 @@ const CustomPDFViewer = ({
     }));
   };
 
-  const handleMouseUp = () => {
-    if (isDragging && currentField && mode === 'placement') {
-      if (currentField.width >= 50 && currentField.height >= 20) {
-        onFieldAdd({
+  const handlePageMouseUp = () => {
+    if (isDragging && currentField && dragStart) {
+      // Validate field placement (must be within page bounds)
+      const currentPageData = pdfImages[currentPage - 1];
+      if (currentPageData) {
+        const maxX = currentPageData.width - currentField.width;
+        const maxY = currentPageData.height - currentField.height;
+
+        const validatedField = {
           ...currentField,
-          temporary: false
-        });
+          x: Math.max(0, Math.min(currentField.x, maxX)),
+          y: Math.max(0, Math.min(currentField.y, maxY)),
+          isDragging: false
+        };
+
+        if (validatedField.width >= 50 && validatedField.height >= 20) {
+          onFieldAdd(validatedField);
+        }
       }
-      
+
       setCurrentField(null);
       setIsDragging(false);
+      setDragStart(null);
     }
   };
 
-  // Add event listeners for drag operations
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, currentField]);
+  // Field selection and manipulation
+  const handleFieldSelect = (fieldId) => {
+    setSelectedField(fieldId);
+    onFieldSelect?.(fieldId);
+  };
 
-  const getFieldStyle = (field) => {
-    const typeConfig = fieldTypes[field.type] || fieldTypes.SIGNATURE;
+  const handleFieldDrag = (fieldId, newX, newY) => {
+    const field = signatureFields.find(f => f.id === fieldId);
+    if (!field) return;
+
+    const currentPageData = pdfImages[field.pageNumber - 1];
+    if (!currentPageData) return;
+
+    // Constrain to page boundaries
+    const maxX = currentPageData.width - field.width;
+    const maxY = currentPageData.height - field.height;
+
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
+
+    onFieldUpdate(fieldId, { x: constrainedX, y: constrainedY });
+  };
+
+  const handleFieldResize = (fieldId, direction, deltaX, deltaY) => {
+    const field = signatureFields.find(f => f.id === fieldId);
+    if (!field) return;
+
+    const fieldConfig = fieldTypes[field.type];
+    const minWidth = fieldConfig.defaultWidth / 2;
+    const minHeight = fieldConfig.defaultHeight / 2;
+
+    let updates = {};
+
+    switch (direction) {
+      case 'nw':
+        updates = {
+          x: field.x + deltaX,
+          y: field.y + deltaY,
+          width: Math.max(minWidth, field.width - deltaX),
+          height: Math.max(minHeight, field.height - deltaY)
+        };
+        break;
+      case 'ne':
+        updates = {
+          y: field.y + deltaY,
+          width: Math.max(minWidth, field.width + deltaX),
+          height: Math.max(minHeight, field.height - deltaY)
+        };
+        break;
+      case 'sw':
+        updates = {
+          x: field.x + deltaX,
+          width: Math.max(minWidth, field.width - deltaX),
+          height: Math.max(minHeight, field.height + deltaY)
+        };
+        break;
+      case 'se':
+        updates = {
+          width: Math.max(minWidth, field.width + deltaX),
+          height: Math.max(minHeight, field.height + deltaY)
+        };
+        break;
+    }
+
+    onFieldUpdate(fieldId, updates);
+  };
+
+  // Enhanced field rendering with resize handles
+  const renderField = (field) => {
+    const fieldConfig = fieldTypes[field.type] || fieldTypes.SIGNATURE;
+    const isSelected = selectedField === field.id;
+    const signer = signers.find(s => s.id === field.signerId);
     
-    return {
+    const style = {
       position: 'absolute',
       left: `${field.x * scale}px`,
       top: `${field.y * scale}px`,
       width: `${field.width * scale}px`,
       height: `${field.height * scale}px`,
-      border: '2px dashed',
+      border: isSelected ? '2px solid #60a5fa' : '2px dashed #9ca3af',
       borderRadius: '4px',
-      cursor: 'pointer',
-      zIndex: 10,
-      pointerEvents: 'none'
+      backgroundColor: fieldConfig.color.split(' ')[1],
+      cursor: mode === 'placement' ? 'move' : 'default',
+      zIndex: isSelected ? 20 : 10,
+      pointerEvents: mode === 'placement' ? 'auto' : 'none'
     };
+
+    return (
+      <div
+        key={field.id}
+        style={style}
+        className={`field-container group ${fieldConfig.color}`}
+        onClick={() => handleFieldSelect(field.id)}
+      >
+        {/* Field Content */}
+        <div className="w-full h-full flex flex-col items-center justify-center p-1">
+          <fieldConfig.icon className="w-4 h-4 mb-1 opacity-70" />
+          <span className="text-xs font-medium text-center leading-tight">
+            {fieldConfig.label}
+          </span>
+          {signer && (
+            <span className="text-xs opacity-60 text-center leading-tight">
+              {signer.name}
+            </span>
+          )}
+        </div>
+
+        {/* Resize Handles */}
+        {isSelected && mode === 'placement' && (
+          <>
+            {/* Northwest */}
+            <div
+              className="absolute -left-1 -top-1 w-2 h-2 bg-blue-400 rounded-sm cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizing(true);
+                setResizeDirection('nw');
+              }}
+            />
+            {/* Northeast */}
+            <div
+              className="absolute -right-1 -top-1 w-2 h-2 bg-blue-400 rounded-sm cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizing(true);
+                setResizeDirection('ne');
+              }}
+            />
+            {/* Southwest */}
+            <div
+              className="absolute -left-1 -bottom-1 w-2 h-2 bg-blue-400 rounded-sm cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizing(true);
+                setResizeDirection('sw');
+              }}
+            />
+            {/* Southeast */}
+            <div
+              className="absolute -right-1 -bottom-1 w-2 h-2 bg-blue-400 rounded-sm cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizing(true);
+                setResizeDirection('se');
+              }}
+            />
+          </>
+        )}
+
+        {/* Delete Button */}
+        {isSelected && mode === 'placement' && (
+          <button
+            className="absolute -right-2 -top-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFieldRemove(field.id);
+            }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    );
   };
 
-  const getSignerName = (signerId) => {
-    const signer = signers.find(s => s.id === signerId);
-    return signer?.name || `Signer ${signerId}`;
-  };
+  // Event listeners for drag and resize operations
+  useEffect(() => {
+    const handleGlobalMouseMove = (event) => {
+      if (isDragging && currentField) {
+        handlePageMouseMove(event);
+      }
+      
+      if (isResizing && selectedField && resizeDirection) {
+        // Handle resize logic here
+        const field = signatureFields.find(f => f.id === selectedField);
+        if (!field) return;
 
-  const openPDFInNewTab = () => {
-    if (!file) return;
+        const pageElement = containerRef.current?.querySelector('.pdf-page-container');
+        if (!pageElement) return;
 
-    let pdfUrl;
-    if (file instanceof File) {
-      pdfUrl = URL.createObjectURL(file);
-    } else if (file.url) {
-      pdfUrl = `http://localhost:3000${file.url}`;
+        const rect = pageElement.getBoundingClientRect();
+        const deltaX = (event.movementX / scale);
+        const deltaY = (event.movementY / scale);
+
+        handleFieldResize(selectedField, resizeDirection, deltaX, deltaY);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handlePageMouseUp();
+      }
+      if (isResizing) {
+        setIsResizing(false);
+        setResizeDirection(null);
+      }
+    };
+
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
     }
+  }, [isDragging, isResizing, currentField, selectedField, resizeDirection, scale]);
 
-    if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
-    }
-  };
+  const currentPageData = pdfImages[currentPage - 1];
 
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Document Preview</h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={openPDFInNewTab}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
-            title="Open PDF in new tab"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setScale(prev => Math.max(0.5, prev - 0.2))}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
-            disabled={scale <= 0.5}
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-gray-400 text-sm min-w-12 text-center">{(scale * 100).toFixed(0)}%</span>
-          <button
-            onClick={() => setScale(prev => Math.min(3, prev + 0.2))}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
-            disabled={scale >= 3}
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
+    <Card className={className}>
+      {/* Enhanced Toolbar */}
+      <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <FileText className="w-5 h-5 text-blue-400" />
+          Document Preview
+          {totalPages > 0 && (
+            <span className="text-sm text-gray-400 font-normal">
+              (Page {currentPage} of {totalPages})
+            </span>
+          )}
+        </h3>
+        
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Controls */}
+          <div className="flex items-center gap-1 bg-gray-700 rounded-lg p-1">
+            <Tooltip content="Show Grid" position="bottom">
+              <button
+                onClick={() => setShowGrid(!showGrid)}
+                className={`p-2 rounded transition-colors ${
+                  showGrid ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip content="Zoom Out" position="bottom">
+              <button
+                onClick={() => setScale(prev => Math.max(0.3, prev - 0.2))}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded"
+                disabled={scale <= 0.3}
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            
+            <span className="text-gray-400 text-sm min-w-12 text-center px-2">
+              {Math.round(scale * 100)}%
+            </span>
+            
+            <Tooltip content="Zoom In" position="bottom">
+              <button
+                onClick={() => setScale(prev => Math.min(3, prev + 0.2))}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded"
+                disabled={scale >= 3}
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            
+            <Tooltip content="Reset Zoom" position="bottom">
+              <button
+                onClick={() => setScale(1.0)}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </Tooltip>
+          </div>
+
+          {/* Fullscreen Toggle */}
+          <Tooltip content={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"} position="bottom">
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+          </Tooltip>
+
+          {/* External View */}
+          <Tooltip content="Open in New Tab" position="bottom">
+            <button
+              onClick={() => {
+                if (file) {
+                  let pdfUrl;
+                  if (file instanceof File) {
+                    pdfUrl = URL.createObjectURL(file);
+                  } else if (file.url) {
+                    pdfUrl = `http://localhost:3000${file.url}`;
+                  }
+                  if (pdfUrl) window.open(pdfUrl, '_blank');
+                }
+              }}
+              className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
-      {/* Field Placement Controls */}
+      {/* Field Placement Instructions */}
       {mode === 'placement' && (
-        <div className="mb-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-4 space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Signer
+                Assign to Signer
               </label>
               <select
                 value={selectedSignerId || ''}
                 onChange={(e) => onSignerSelect(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Choose a signer...</option>
+                <option value="">Select a signer...</option>
                 {signers.map(signer => (
                   <option key={signer.id} value={signer.id}>
                     {signer.name} ({signer.email})
@@ -368,17 +716,17 @@ const CustomPDFViewer = ({
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Field Type
+                Field Templates
               </label>
               <select
                 value={selectedFieldType || ''}
                 onChange={(e) => onFieldTypeSelect(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Select field type...</option>
-                {Object.entries(fieldTypes).map(([type, config]) => (
-                  <option key={type} value={type}>
-                    {config.label}
+                <option value="">Choose field type...</option>
+                {fieldTemplates.map(template => (
+                  <option key={template.type} value={template.type}>
+                    {template.label}
                   </option>
                 ))}
               </select>
@@ -389,8 +737,34 @@ const CustomPDFViewer = ({
             <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-800/50">
               <p className="text-blue-300 text-sm flex items-center gap-2">
                 <MousePointer className="w-4 h-4" />
-                Click and drag on the document to place {selectedFieldType.toLowerCase()} fields for {getSignerName(selectedSignerId)}
+                <span>
+                  Drag a field template below and drop it on the document, or click and drag directly on the document to place a {selectedFieldType.toLowerCase()} field for {signers.find(s => s.id === selectedSignerId)?.name}
+                </span>
               </p>
+            </div>
+          )}
+
+          {/* Draggable Field Templates */}
+          {selectedSignerId && selectedFieldType && (
+            <div className="flex flex-wrap gap-2 p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-gray-400 text-sm w-full mb-2">Drag these templates to the document:</p>
+              {fieldTemplates
+                .filter(template => template.type === selectedFieldType)
+                .map(template => {
+                  const fieldConfig = fieldTypes[template.type];
+                  return (
+                    <div
+                      key={template.type}
+                      draggable
+                      onDragStart={(e) => handleFieldDragStart(template.type, e)}
+                      className="flex items-center gap-2 px-3 py-2 border border-gray-600 rounded-lg cursor-grab bg-gray-700 hover:bg-gray-600 transition-colors"
+                    >
+                      <template.icon className="w-4 h-4" />
+                      <span className="text-sm text-white">{template.label}</span>
+                      <Grip className="w-4 h-4 text-gray-400" />
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -399,156 +773,185 @@ const CustomPDFViewer = ({
       {/* PDF Document Container */}
       <div 
         ref={containerRef}
-        className="border border-gray-700 rounded-lg overflow-auto bg-gray-900 max-h-96 min-h-64 flex items-center justify-center relative"
+        className={`border border-gray-700 rounded-lg overflow-auto bg-gray-900 relative transition-all ${
+          isFullscreen ? 'fixed inset-4 z-50' : 'max-h-96 min-h-96'
+        }`}
       >
         {isLoading && (
           <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10">
             <div className="text-center">
               <Loader className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">Loading PDF...</p>
+              <p className="text-gray-400 text-sm">Loading PDF document...</p>
+              <p className="text-gray-500 text-xs mt-1">This may take a moment for large files</p>
             </div>
           </div>
         )}
 
         {error ? (
-          <div className="text-center p-8 text-red-400">
-            <AlertCircle className="w-12 h-12 mx-auto mb-2" />
-            <p className="font-medium">{error}</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Please ensure you're using a valid PDF file
-            </p>
-            <Button
-              variant="outline"
-              onClick={loadPDFPreview}
-              className="mt-4"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Retry Loading
-            </Button>
-          </div>
-        ) : pdfImages.length > 0 ? (
-          <div className="relative">
-            {pdfImages.map((imageUrl, index) => (
-              <div
-                key={index}
-                className="pdf-page relative border border-gray-600 bg-white shadow-lg"
-                style={{ 
-                  transform: `scale(${scale})`,
-                  transformOrigin: 'top left',
-                  cursor: selectedSignerId && selectedFieldType && mode === 'placement' ? 'crosshair' : 'default'
-                }}
-                onClick={(e) => handlePageClick(e, index)}
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <div className="text-center max-w-md">
+              <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+              <p className="font-medium text-red-400 mb-2">{error}</p>
+              <p className="text-gray-400 text-sm mb-4">
+                Please ensure you're using a valid PDF file and try again.
+              </p>
+              <Button
+                variant="outline"
+                onClick={loadPDFWithPDFJS}
+                className="mt-2"
               >
-                {/* PDF Preview */}
-                {imageUrl.startsWith('data:') ? (
-                  <img
-                    src={imageUrl}
-                    alt={`PDF Page ${index + 1}`}
-                    className="max-w-full h-auto"
-                  />
-                ) : (
-                  <iframe
-                    src={imageUrl}
-                    className="w-full h-80 border-0"
-                    title={`PDF Page ${index + 1}`}
-                  />
-                )}
-                
-                {/* Render existing signature fields */}
-                {signatureFields
-                  .filter(field => field.pageNumber === index + 1)
-                  .map(field => {
-                    const FieldIcon = fieldTypes[field.type]?.icon || Signature;
-                    const signer = signers.find(s => s.id === field.signerId);
-                    
-                    return (
-                      <div
-                        key={field.id}
-                        style={getFieldStyle(field)}
-                        className="group"
-                      >
-                        <div className="absolute -top-8 left-0 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 min-w-max z-20">
-                          <FieldIcon className="w-3 h-3" />
-                          <span>{fieldTypes[field.type]?.label}</span>
-                          <span className="text-gray-300">• {signer?.name}</span>
-                          {mode === 'placement' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onFieldRemove(field.id);
-                              }}
-                              className="text-red-400 hover:text-red-300 ml-1"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                        <div className={`w-full h-full flex items-center justify-center text-xs ${
-                          fieldTypes[field.type]?.color || 'border-blue-400 bg-blue-500/20'
-                        } text-gray-700`}>
-                          {field.type.toLowerCase()}
-                        </div>
-                      </div>
-                    );
-                  })}
-                
-                {/* Render current dragging field */}
-                {currentField && currentField.pageNumber === index + 1 && (
-                  <div 
-                    style={getFieldStyle(currentField)}
-                    className="border-blue-400 bg-blue-500/10"
-                  >
-                    <div className="w-full h-full flex items-center justify-center text-xs text-blue-400">
-                      New {currentField.type.toLowerCase()}
-                    </div>
-                  </div>
-                )}
+                <RotateCcw className="w-4 h-4" />
+                Retry Loading
+              </Button>
+            </div>
+          </div>
+        ) : currentPageData ? (
+          <div 
+            className="pdf-page-container relative"
+            style={{
+              width: `${currentPageData.width * scale}px`,
+              height: `${currentPageData.height * scale}px`,
+              margin: '0 auto',
+              cursor: isDragging ? 'grabbing' : (mode === 'placement' && selectedSignerId && selectedFieldType) ? 'crosshair' : 'default'
+            }}
+            onMouseDown={handlePageMouseDown}
+          >
+            {/* Grid Overlay */}
+            {showGrid && (
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+                  `,
+                  backgroundSize: `${20 * scale}px ${20 * scale}px`
+                }}
+              />
+            )}
+
+            {/* PDF Page */}
+            <img
+              src={currentPageData.imageUrl}
+              alt={`PDF Page ${currentPage}`}
+              className="absolute top-0 left-0 w-full h-full shadow-lg"
+              style={{ pointerEvents: 'none' }}
+            />
+
+            {/* Signature Fields */}
+            {signatureFields
+              .filter(field => field.pageNumber === currentPage)
+              .map(renderField)}
+
+            {/* Current Dragging Field */}
+            {currentField && currentField.pageNumber === currentPage && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  left: `${currentField.x * scale}px`,
+                  top: `${currentField.y * scale}px`,
+                  width: `${currentField.width * scale}px`,
+                  height: `${currentField.height * scale}px`,
+                  border: '2px dashed #60a5fa',
+                  backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                  borderRadius: '4px',
+                  pointerEvents: 'none',
+                  zIndex: 15
+                }}
+              >
+                <div className="w-full h-full flex items-center justify-center text-blue-400 text-sm">
+                  Placing {fieldTypes[currentField.type]?.label}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Drop Zone Overlay */}
+            {mode === 'placement' && selectedSignerId && selectedFieldType && (
+              <div className="absolute inset-0 border-2 border-dashed border-blue-400 opacity-0 hover:opacity-100 transition-opacity pointer-events-none rounded" />
+            )}
           </div>
         ) : file ? (
-          <div className="text-center p-12 text-gray-500">
-            <FileText className="w-16 h-16 mx-auto mb-4" />
-            <p>PDF document loaded</p>
-            <p className="text-sm mt-1">Setting up preview...</p>
-            <Button
-              variant="outline"
-              onClick={loadPDFPreview}
-              className="mt-4"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Load Preview
-            </Button>
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <div className="text-center">
+              <FileText className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-400">PDF document loaded</p>
+              <p className="text-gray-500 text-sm mt-1">Preparing enhanced preview...</p>
+              <Button
+                variant="outline"
+                onClick={loadPDFWithPDFJS}
+                className="mt-4"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Generate Preview
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="text-center p-12 text-gray-500">
-            <FileText className="w-16 h-16 mx-auto mb-4" />
-            <p>No PDF document loaded</p>
-            <p className="text-sm mt-1">Upload a PDF file to preview</p>
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <div className="text-center">
+              <FileText className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-400">No PDF document loaded</p>
+              <p className="text-gray-500 text-sm mt-1">Upload a PDF file to begin</p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Page Navigation */}
+      {/* Enhanced Page Navigation */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage <= 1}
-            className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
           >
-            Previous
-          </button>
-          <span className="text-gray-400 text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
+            Previous Page
+          </Button>
+          
+          <div className="flex items-center gap-4">
+            <span className="text-gray-400 text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-white text-sm"
+            >
+              {Array.from({ length: totalPages }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  Page {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage >= totalPages}
-            className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
           >
-            Next
-          </button>
+            Next Page
+          </Button>
+        </div>
+      )}
+
+      {/* Field Statistics */}
+      {mode === 'placement' && (
+        <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Fields on current page:</span>
+            <span className="text-white font-medium">
+              {signatureFields.filter(f => f.pageNumber === currentPage).length} fields
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm mt-1">
+            <span className="text-gray-400">Total fields in document:</span>
+            <span className="text-white font-medium">
+              {signatureFields.length} fields across {new Set(signatureFields.map(f => f.pageNumber)).size} pages
+            </span>
+          </div>
         </div>
       )}
     </Card>
@@ -556,27 +959,31 @@ const CustomPDFViewer = ({
 };
 
 // ===============================
-// 👤 Signer Form Component
+// 👤 Enhanced Signer Form Component
 // ===============================
 
-const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = false }) => {
+const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = false, isCurrent = false }) => {
   const [isExpanded, setIsExpanded] = useState(index === 0);
 
   const isEditable = !isSigned;
 
   return (
-    <Card className="relative">
+    <Card className={`relative transition-all ${
+      isCurrent ? 'ring-2 ring-blue-500' : ''
+    }`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-            isSigned ? 'bg-green-600' : 'bg-blue-600'
+            isSigned ? 'bg-green-600' : 
+            isCurrent ? 'bg-blue-600' : 'bg-gray-600'
           }`}>
             {index + 1}
           </div>
           <div>
-            <h4 className="font-medium text-white">
+            <h4 className="font-medium text-white flex items-center gap-2">
               {signer.name || `Signer ${index + 1}`}
-              {isSigned && <CheckCircle className="w-4 h-4 text-green-400 inline ml-2" />}
+              {isSigned && <CheckCircle className="w-4 h-4 text-green-400" />}
+              {isCurrent && <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />}
             </h4>
             <p className="text-gray-400 text-sm">{signer.email}</p>
           </div>
@@ -584,21 +991,25 @@ const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = fals
         <div className="flex items-center gap-2">
           {isEditable && (
             <>
-              <button
-                type="button"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              {!isLast && (
+              <Tooltip content={isExpanded ? "Collapse" : "Expand"} position="top">
                 <button
                   type="button"
-                  onClick={onRemove}
-                  className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-gray-700"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Settings className="w-4 h-4" />
                 </button>
+              </Tooltip>
+              {!isLast && (
+                <Tooltip content="Remove Signer" position="top">
+                  <button
+                    type="button"
+                    onClick={onRemove}
+                    className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-gray-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </Tooltip>
               )}
             </>
           )}
@@ -618,6 +1029,7 @@ const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = fals
             value={signer.name}
             onChange={(e) => onUpdate({ ...signer, name: e.target.value })}
             required
+            helper="The signer's full legal name"
           />
           <Input
             label="Email Address"
@@ -626,6 +1038,7 @@ const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = fals
             value={signer.email}
             onChange={(e) => onUpdate({ ...signer, email: e.target.value })}
             required
+            helper="Where to send the signing invitation"
           />
         </div>
       )}
@@ -634,7 +1047,7 @@ const SignerForm = ({ signer, index, onUpdate, onRemove, isLast, isSigned = fals
 };
 
 // ===============================
-// 🧠 MAIN CREATE/EDIT DOCUMENT COMPONENT
+// 🧠 Enhanced MAIN CREATE/EDIT DOCUMENT COMPONENT
 // ===============================
 
 export default function CreateDocumentPage() {
@@ -643,7 +1056,7 @@ export default function CreateDocumentPage() {
   const location = useLocation();
   const fileInputRef = useRef(null);
 
-  // State
+  // Enhanced State
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -651,13 +1064,17 @@ export default function CreateDocumentPage() {
   const [createdDocument, setCreatedDocument] = useState(null);
   const [createdEnvelope, setCreatedEnvelope] = useState(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Signature field state
+  // Enhanced Signature field state
   const [signatureFields, setSignatureFields] = useState([]);
   const [selectedSignerId, setSelectedSignerId] = useState(null);
   const [selectedFieldType, setSelectedFieldType] = useState('SIGNATURE');
+  const [selectedFieldId, setSelectedFieldId] = useState(null);
+  const [fieldHistory, setFieldHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // Form data
+  // Enhanced Form data
   const [formData, setFormData] = useState({
     title: '',
     file: null,
@@ -665,263 +1082,125 @@ export default function CreateDocumentPage() {
       { 
         id: 1, 
         name: '', 
-        email: ''
+        email: '',
+        role: 'signer',
+        order: 1
       }
     ],
     expirationDays: 30,
-    message: 'Please review and sign this document.',
+    message: 'Please review and sign this document at your earliest convenience.',
     reminders: true,
-    allowDecline: false
+    allowDecline: false,
+    enableAuditTrail: true,
+    requireAuthentication: false,
+    branding: {
+      companyName: '',
+      logoUrl: '',
+      primaryColor: '#2563eb'
+    }
   });
 
   const isEditMode = !!id;
 
-  // Check for template from location state
+  // Enhanced template handling
   useEffect(() => {
     if (location.state?.template) {
       const template = location.state.template;
       console.log('Template from location state:', template);
       
-      // If it's a predefined template, we need to fetch the actual file
       if (template.isPredefined) {
-        // For predefined templates, we'll use the fileUrl directly
         setFormData(prev => ({
           ...prev,
           title: template.name,
-          file: { url: template.fileUrl } // This will be handled by our PDF viewer
+          file: { url: template.fileUrl, name: template.name }
         }));
       } else {
-        // For custom templates, we might need to fetch the file
         setFormData(prev => ({
           ...prev,
           title: template.name,
-          file: { url: template.fileUrl }
+          file: { url: template.fileUrl, name: template.name }
         }));
       }
       
-      // Auto-advance to step 2 since we have a template
       setStep(2);
     }
   }, [location.state]);
 
-  // ===============================
-  // 📥 Fetch Existing Data for Edit Mode
-  // ===============================
+  // Enhanced field history management
+  const saveToHistory = useCallback((fields) => {
+    const newHistory = fieldHistory.slice(0, historyIndex + 1);
+    newHistory.push(fields);
+    setFieldHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [fieldHistory, historyIndex]);
 
-  useEffect(() => {
-    if (isEditMode) {
-      fetchExistingDocument();
+  const undoFieldChange = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setSignatureFields([...fieldHistory[historyIndex - 1]]);
     }
-  }, [id]);
+  }, [historyIndex, fieldHistory]);
 
-  const fetchExistingDocument = async () => {
-    try {
-      setIsLoading(true);
-      const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
-      const token = localStorage.getItem('token');
-
-      // Fetch document details
-      const docResponse = await fetch(`http://localhost:3000/api/v1/documents/${id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': apiKey,
-        },
-      });
-
-      if (!docResponse.ok) {
-        throw new Error('Failed to fetch document');
-      }
-
-      const documentData = await docResponse.json();
-      
-      setCreatedDocument(documentData);
-
-      // Try to fetch envelope and signature fields
-      await fetchEnvelopeAndFields(documentData.id);
-
-      // Pre-fill form with existing data
-      setFormData(prev => ({
-        ...prev,
-        title: documentData.title,
-        file: { url: documentData.fileUrl }
-      }));
-
-      // Auto-advance to step 2 if we have a document
-      setStep(2);
-
-    } catch (error) {
-      console.error('Error fetching document:', error);
-      setError('Failed to load document for editing');
-    } finally {
-      setIsLoading(false);
+  const redoFieldChange = useCallback(() => {
+    if (historyIndex < fieldHistory.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setSignatureFields([...fieldHistory[historyIndex + 1]]);
     }
-  };
+  }, [historyIndex, fieldHistory]);
 
-  const fetchEnvelopeAndFields = async (documentId) => {
-    try {
-      const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
-      const token = localStorage.getItem('token');
-
-      // Fetch envelopes for this document
-      const envelopesResponse = await fetch(`http://localhost:3000/api/v1/envelopes?documentId=${documentId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': apiKey,
-        },
-      });
-
-      if (envelopesResponse.ok) {
-        const envelopesData = await envelopesResponse.json();
-        if (envelopesData.length > 0) {
-          const envelope = envelopesData[0];
-          setCreatedEnvelope(envelope);
-          
-          // Pre-fill signers from envelope
-          if (envelope.signers && envelope.signers.length > 0) {
-            const signersWithIds = envelope.signers.map((signer, index) => ({
-              id: signer.id || index + 1,
-              name: signer.name,
-              email: signer.email,
-              status: signer.status
-            }));
-            
-            setFormData(prev => ({
-              ...prev,
-              signers: signersWithIds
-            }));
-
-            // Auto-select first signer
-            if (signersWithIds.length > 0) {
-              setSelectedSignerId(signersWithIds[0].id);
-            }
-          }
-
-          // Fetch signature fields
-          await fetchSignatureFields(envelope.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching envelope data:', error);
-    }
-  };
-
-  const fetchSignatureFields = async (envelopeId) => {
-    try {
-      const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`http://localhost:3000/api/v1/signature-fields/${envelopeId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': apiKey,
-        },
-      });
-
-      if (response.ok) {
-        const fields = await response.json();
-        setSignatureFields(fields.map(field => ({
-          ...field,
-          id: field.id || `field-${Date.now()}`
-        })));
-      }
-    } catch (error) {
-      console.error('Error fetching signature fields:', error);
-    }
-  };
-
-  // ===============================
-  // 🧩 Signature Field Handlers
-  // ===============================
-
+  // Enhanced field operations with history
   const handleAddSignatureField = useCallback((field) => {
-    setSignatureFields(prev => [...prev, { ...field, id: `field-${Date.now()}` }]);
-  }, []);
+    const newField = { 
+      ...field, 
+      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const newFields = [...signatureFields, newField];
+    setSignatureFields(newFields);
+    saveToHistory(newFields);
+  }, [signatureFields, saveToHistory]);
 
   const handleUpdateSignatureField = useCallback((fieldId, updates) => {
-    setSignatureFields(prev => 
-      prev.map(field => field.id === fieldId ? { ...field, ...updates } : field)
+    const newFields = signatureFields.map(field => 
+      field.id === fieldId ? { ...field, ...updates, updatedAt: new Date().toISOString() } : field
     );
-  }, []);
+    setSignatureFields(newFields);
+    saveToHistory(newFields);
+  }, [signatureFields, saveToHistory]);
 
   const handleRemoveSignatureField = useCallback((fieldId) => {
-    setSignatureFields(prev => prev.filter(field => field.id !== fieldId));
-  }, []);
+    const newFields = signatureFields.filter(field => field.id !== fieldId);
+    setSignatureFields(newFields);
+    setSelectedFieldId(null);
+    saveToHistory(newFields);
+  }, [signatureFields, saveToHistory]);
 
-  const handleSignerSelect = useCallback((signerId) => {
-    setSelectedSignerId(signerId);
-  }, []);
-
-  const handleFieldTypeSelect = useCallback((fieldType) => {
-    setSelectedFieldType(fieldType);
-  }, []);
-
-  // ===============================
-  // 📤 Save Signature Fields to Backend
-  // ===============================
-
-  const saveSignatureFields = async (signingRequestId) => {
-    try {
-      if (signatureFields.length === 0) return;
-
-      const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
-      const token = localStorage.getItem('token');
-
-      const response = await fetch('http://localhost:3000/api/v1/signature-fields', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          signingRequestId,
-          fields: signatureFields.map(field => ({
-            signerId: field.signerId,
-            pageNumber: field.pageNumber,
-            x: Math.round(field.x),
-            y: Math.round(field.y),
-            width: Math.round(field.width),
-            height: Math.round(field.height),
-            type: field.type
-          }))
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to save signature fields');
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving signature fields:', error);
-      throw error;
+  const handleDuplicateField = useCallback((fieldId) => {
+    const fieldToDuplicate = signatureFields.find(f => f.id === fieldId);
+    if (fieldToDuplicate) {
+      const duplicatedField = {
+        ...fieldToDuplicate,
+        id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        x: fieldToDuplicate.x + 20,
+        y: fieldToDuplicate.y + 20,
+        createdAt: new Date().toISOString()
+      };
+      const newFields = [...signatureFields, duplicatedField];
+      setSignatureFields(newFields);
+      saveToHistory(newFields);
     }
-  };
+  }, [signatureFields, saveToHistory]);
 
-  // ===============================
-  // 📄 Document Upload Handler
-  // ===============================
-
-  const handleFileSelect = useCallback((event) => {
-    const file = event.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      setFormData(prev => ({
-        ...prev,
-        file,
-        title: prev.title || file.name.replace('.pdf', '')
-      }));
-      // Reset signature fields when new file is selected
+  const handleClearAllFields = useCallback(() => {
+    if (signatureFields.length > 0 && window.confirm('Are you sure you want to remove all signature fields? This action cannot be undone.')) {
       setSignatureFields([]);
-    } else {
-      alert('Please select a PDF file');
+      setSelectedFieldId(null);
+      saveToHistory([]);
     }
-  }, []);
+  }, [signatureFields, saveToHistory]);
 
-  // ===============================
-  // 👥 Signer Management Handlers
-  // ===============================
-
+  // Enhanced signer management
   const handleAddSigner = useCallback(() => {
     const newSignerId = Math.max(...formData.signers.map(s => s.id), 0) + 1;
     
@@ -932,10 +1211,15 @@ export default function CreateDocumentPage() {
         { 
           id: newSignerId, 
           name: '', 
-          email: ''
+          email: '',
+          role: 'signer',
+          order: prev.signers.length + 1
         }
       ]
     }));
+
+    // Auto-select the new signer
+    setSelectedSignerId(newSignerId);
   }, [formData.signers]);
 
   const handleUpdateSigner = useCallback((index, updatedSigner) => {
@@ -956,34 +1240,78 @@ export default function CreateDocumentPage() {
     }));
 
     // Remove signature fields for this signer
-    setSignatureFields(prev => 
-      prev.filter(field => field.signerId !== signerToRemove.id)
-    );
+    const newFields = signatureFields.filter(field => field.signerId !== signerToRemove.id);
+    setSignatureFields(newFields);
+    saveToHistory(newFields);
 
     // Reset selected signer if it was the removed one
     if (selectedSignerId === signerToRemove.id) {
       setSelectedSignerId(formData.signers[0]?.id || null);
     }
-  }, [formData.signers, selectedSignerId]);
+  }, [formData.signers, signatureFields, selectedSignerId, saveToHistory]);
 
-  // ===============================
-  // 🚀 Main Action Handlers
-  // ===============================
+  // Enhanced field validation
+  const validateForm = useCallback(() => {
+    // Validate signers
+    const invalidSigners = formData.signers.filter(signer => !signer.name.trim() || !signer.email.trim());
+    if (invalidSigners.length > 0) {
+      setError('Please fill in all signer information (name and email)');
+      return false;
+    }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidEmails = formData.signers.filter(signer => !emailRegex.test(signer.email));
+    if (invalidEmails.length > 0) {
+      setError('Please enter valid email addresses for all signers');
+      return false;
+    }
+
+    // Validate signature fields
+    if (signatureFields.length === 0) {
+      setError('Please place at least one signature field on the document');
+      return false;
+    }
+
+    // Validate that each signer has at least one field
+    const signersWithFields = new Set(signatureFields.map(field => field.signerId));
+    const signersWithoutFields = formData.signers.filter(signer => !signersWithFields.has(signer.id));
+    if (signersWithoutFields.length > 0) {
+      setError(`The following signers have no signature fields: ${signersWithoutFields.map(s => s.name || `Signer ${s.id}`).join(', ')}`);
+      return false;
+    }
+
+    setError('');
+    return true;
+  }, [formData.signers, signatureFields]);
+
+  // Enhanced API calls with proper error handling
   const handleUploadDocument = async () => {
-    if (!formData.file) {
-      alert('Please upload a PDF document');
+    if (!formData.file && !isEditMode) {
+      setError('Please upload a PDF document');
       return;
     }
 
     setIsSubmitting(true);
     setUploadProgress(0);
+    setError('');
 
     try {
       const submitData = new FormData();
-      submitData.append('file', formData.file);
+      
+      if (formData.file instanceof File) {
+        submitData.append('file', formData.file);
+      }
+      
       submitData.append('title', formData.title);
+      submitData.append('metadata', JSON.stringify({
+        pageCount: 1, // Will be updated after upload
+        fileSize: formData.file?.size || 0,
+        uploadedAt: new Date().toISOString()
+      }));
+
       const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
+      const token = localStorage.getItem('token');
 
       // Simulate upload progress
       const progressInterval = setInterval(() => {
@@ -996,10 +1324,14 @@ export default function CreateDocumentPage() {
         });
       }, 200);
 
-      const response = await fetch('http://localhost:3000/api/v1/documents', {
-        method: 'POST',
+      const url = isEditMode && createdDocument 
+        ? `http://localhost:3000/api/v1/documents/${createdDocument.id}`
+        : 'http://localhost:3000/api/v1/documents';
+
+      const response = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'x-api-key': apiKey,
         },
         body: submitData,
@@ -1008,7 +1340,8 @@ export default function CreateDocumentPage() {
       clearInterval(progressInterval);
 
       if (!response.ok) {
-        throw new Error(`Failed to upload document (${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'upload'} document (${response.status})`);
       }
 
       const document = await response.json();
@@ -1016,40 +1349,43 @@ export default function CreateDocumentPage() {
       
       setCreatedDocument(document);
       setStep(2);
+      setSuccess(`Document ${isEditMode ? 'updated' : 'uploaded'} successfully!`);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
 
     } catch (error) {
       console.error('Error uploading document:', error);
-      alert(`Upload failed: ${error?.message || 'Unknown error occurred'}`);
+      setError(error.message || `Failed to ${isEditMode ? 'update' : 'upload'} document. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCreateEnvelope = async () => {
-    if (formData.signers.some(signer => !signer.name || !signer.email)) {
-      alert('Please fill in all signer information');
-      return;
-    }
-
-    if (signatureFields.length === 0) {
-      alert('Please place at least one signature field on the document');
+    if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
+    setError('');
 
     try {
       // Calculate expiration date
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + formData.expirationDays);
 
-      // Prepare signers for envelope creation
-      const envelopeSigners = formData.signers.map(signer => ({
+      // Prepare enhanced signers data
+      const envelopeSigners = formData.signers.map((signer, index) => ({
         name: signer.name,
-        email: signer.email
+        email: signer.email,
+        role: signer.role,
+        order: index + 1,
+        requireAuthentication: formData.requireAuthentication
       }));
 
       const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
+      const token = localStorage.getItem('token');
 
       let envelope;
       
@@ -1059,13 +1395,18 @@ export default function CreateDocumentPage() {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
             'x-api-key': apiKey,
           },
           body: JSON.stringify({
             signers: envelopeSigners,
             expiresAt: expiresAt.toISOString(),
-            message: formData.message
+            message: formData.message,
+            settings: {
+              allowDecline: formData.allowDecline,
+              enableAuditTrail: formData.enableAuditTrail,
+              reminders: formData.reminders
+            }
           })
         });
 
@@ -1077,14 +1418,19 @@ export default function CreateDocumentPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
             'x-api-key': apiKey,
           },
           body: JSON.stringify({
             documentId: createdDocument.id,
             signers: envelopeSigners,
             expiresAt: expiresAt.toISOString(),
-            message: formData.message
+            message: formData.message,
+            settings: {
+              allowDecline: formData.allowDecline,
+              enableAuditTrail: formData.enableAuditTrail,
+              reminders: formData.reminders
+            }
           })
         });
 
@@ -1096,413 +1442,178 @@ export default function CreateDocumentPage() {
       // Save signature fields
       await saveSignatureFields(envelope.id);
       
-      alert(isEditMode ? 'Envelope updated successfully!' : 'Envelope created successfully!');
       setStep(3);
+      setSuccess(`Envelope ${isEditMode ? 'updated' : 'created'} successfully!`);
+      setTimeout(() => setSuccess(''), 3000);
 
     } catch (error) {
       console.error('Error creating/updating envelope:', error);
-      alert(`Failed to ${isEditMode ? 'update' : 'create'} envelope. Please try again.`);
+      setError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} envelope. Please try again.`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const saveSignatureFields = async (envelopeId) => {
+    try {
+      if (signatureFields.length === 0) return;
+
+      const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('http://localhost:3000/api/v1/signature-fields', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          envelopeId,
+          fields: signatureFields.map(field => ({
+            signerId: field.signerId,
+            pageNumber: field.pageNumber,
+            x: Math.round(field.x),
+            y: Math.round(field.y),
+            width: Math.round(field.width),
+            height: Math.round(field.height),
+            type: field.type,
+            required: true,
+            metadata: {
+              createdAt: field.createdAt,
+              updatedAt: field.updatedAt
+            }
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to save signature fields');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving signature fields:', error);
+      throw error;
     }
   };
 
   const handleSendEnvelope = async () => {
     setIsSubmitting(true);
+    setError('');
 
     try {
       const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
+      const token = localStorage.getItem('token');
       
       const response = await fetch(`http://localhost:3000/api/v1/envelopes/${createdEnvelope.id}/send`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'x-api-key': apiKey,
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send envelope');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to send envelope');
       }
 
       const result = await response.json();
       
-      alert('Envelope sent successfully! Signers will receive email invitations.');
-      navigate('/documents');
+      setSuccess('Envelope sent successfully! Signers will receive email invitations.');
+      setTimeout(() => {
+        navigate('/documents');
+      }, 2000);
 
     } catch (error) {
       console.error('Error sending envelope:', error);
-      alert('Failed to send envelope. Please try again.');
+      setError(error.message || 'Failed to send envelope. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ===============================
-  // 🎯 Render Steps
-  // ===============================
+  // Enhanced file handling
+  const handleFileSelect = useCallback((event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        setError('Please select a PDF file. Other file types are not supported.');
+        return;
+      }
 
-  const renderStep1 = () => (
-    <Card>
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <Upload className="w-5 h-5 text-blue-400" />
-        {isEditMode ? 'Update Document' : 'Upload Document'}
-      </h2>
+      if (file.size > 25 * 1024 * 1024) { // 25MB limit
+        setError('File size must be less than 25MB');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        file,
+        title: prev.title || file.name.replace('.pdf', '')
+      }));
       
-      <div className="space-y-4">
-        <Input
-          label="Document Title"
-          placeholder="e.g., Employment Agreement, NDA, Contract"
-          value={formData.title}
-          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-          required
-        />
+      // Reset signature fields when new file is selected
+      setSignatureFields([]);
+      setFieldHistory([]);
+      setHistoryIndex(-1);
+      setError('');
+    }
+  }, []);
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            {isEditMode ? 'Update PDF Document (Optional)' : 'Upload PDF Document'}
-          </label>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-gray-500 transition-colors cursor-pointer"
-          >
-            <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <p className="text-gray-300 font-medium">
-              {formData.file ? 'Document Ready' : 'Drop your PDF here or click to browse'}
-            </p>
-            <p className="text-gray-500 text-sm mt-1">
-              Maximum file size: 25MB
-            </p>
-            {formData.file && (
-              <p className="text-green-400 text-sm mt-2 flex items-center justify-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                {formData.file.name || 'Template loaded'} 
-                {formData.file.size && ` (${(formData.file.size / (1024 * 1024)).toFixed(2)} MB)`}
-              </p>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </div>
+  // Enhanced field analysis
+  const getFieldStatistics = useCallback(() => {
+    const stats = {
+      total: signatureFields.length,
+      byType: {},
+      bySigner: {},
+      byPage: {}
+    };
 
-        {isSubmitting && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-gray-400">
-              <span>Uploading document...</span>
-              <span>{uploadProgress}%</span>
-            </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+    signatureFields.forEach(field => {
+      // Count by type
+      stats.byType[field.type] = (stats.byType[field.type] || 0) + 1;
+      
+      // Count by signer
+      stats.bySigner[field.signerId] = (stats.bySigner[field.signerId] || 0) + 1;
+      
+      // Count by page
+      stats.byPage[field.pageNumber] = (stats.byPage[field.pageNumber] || 0) + 1;
+    });
 
-      {isEditMode && (
-        <div className="mt-4 p-4 bg-blue-900/20 rounded-lg border border-blue-800/50">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="text-blue-300 font-medium">Editing Mode</p>
-              <p className="text-blue-400 mt-1">
-                You are editing an existing document. Upload a new PDF file only if you want to replace the current one.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </Card>
-  );
+    return stats;
+  }, [signatureFields]);
 
-  const renderStep2 = () => {
-    const signedSigners = formData.signers.filter(s => s.status === 'SIGNED').length;
+  const fieldStats = getFieldStatistics();
 
-    return (
-      <>
-        {/* Signers Section */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-green-400" />
-              {isEditMode ? 'Manage Signers' : 'Add Signers'} ({formData.signers.length})
-              {signedSigners > 0 && (
-                <span className="text-sm text-green-400 ml-2">
-                  • {signedSigners} signed
-                </span>
-              )}
-            </h2>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddSigner}
-            >
-              <Plus className="w-4 h-4" />
-              Add Signer
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {formData.signers.map((signer, index) => (
-              <SignerForm
-                key={signer.id}
-                signer={signer}
-                index={index}
-                onUpdate={(updated) => handleUpdateSigner(index, updated)}
-                onRemove={() => handleRemoveSigner(index)}
-                isLast={index === 0 && formData.signers.length === 1}
-                isSigned={signer.status === 'SIGNED'}
-              />
-            ))}
-          </div>
-        </Card>
-
-        {/* Signature Field Placement */}
-        <Card>
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Square className="w-5 h-5 text-blue-400" />
-            Place Signature Fields
-            <span className="text-sm text-gray-400 ml-2">({signatureFields.length} placed)</span>
-          </h2>
-          
-          <CustomPDFViewer
-            file={formData.file}
-            signers={formData.signers}
-            signatureFields={signatureFields}
-            onFieldAdd={handleAddSignatureField}
-            onFieldUpdate={handleUpdateSignatureField}
-            onFieldRemove={handleRemoveSignatureField}
-            selectedSignerId={selectedSignerId}
-            onSignerSelect={handleSignerSelect}
-            selectedFieldType={selectedFieldType}
-            onFieldTypeSelect={handleFieldTypeSelect}
-            mode="placement"
-          />
-
-          <div className="mt-4 p-4 bg-blue-900/20 rounded-lg border border-blue-800/50">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-blue-300 font-medium">Signature Field Placement</p>
-                <p className="text-blue-400 mt-1">
-                  1. Select a signer and field type from the dropdowns<br/>
-                  2. Click and drag on the document to place signature fields<br/>
-                  3. Each signer can have multiple fields of different types
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Settings Section */}
-        <Card>
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-purple-400" />
-            Envelope Settings
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Select
-              label="Expiration"
-              value={formData.expirationDays}
-              onChange={(e) => setFormData(prev => ({ ...prev, expirationDays: parseInt(e.target.value) }))}
-              options={[
-                { value: 7, label: '7 days' },
-                { value: 14, label: '14 days' },
-                { value: 30, label: '30 days' },
-                { value: 60, label: '60 days' },
-                { value: 90, label: '90 days' }
-              ]}
-            />
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Message to Signers
-              </label>
-              <textarea
-                value={formData.message}
-                onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                rows={4}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                placeholder="Add a personal message for your signers..."
-              />
-            </div>
-
-            <div className="space-y-3 md:col-span-2">
-              <label className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={formData.reminders}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reminders: e.target.checked }))}
-                  className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                />
-                <Mail className="w-4 h-4 text-blue-400" />
-                <div>
-                  <p className="text-white text-sm font-medium">Send reminder emails</p>
-                  <p className="text-gray-400 text-xs">Automatically remind signers every 3 days</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={formData.allowDecline}
-                  onChange={(e) => setFormData(prev => ({ ...prev, allowDecline: e.target.checked }))}
-                  className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                />
-                <AlertCircle className="w-4 h-4 text-orange-400" />
-                <div>
-                  <p className="text-white text-sm font-medium">Allow signers to decline</p>
-                  <p className="text-gray-400 text-xs">Signers can decline to sign with a reason</p>
-                </div>
-              </label>
-            </div>
-          </div>
-        </Card>
-      </>
-    );
-  };
-
-  const renderStep3 = () => {
-    const signedSigners = formData.signers.filter(s => s.status === 'SIGNED').length;
-    const canSend = signedSigners === 0;
-
-    return (
-      <Card>
-        <div className="text-center py-8">
-          <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">
-            {isEditMode ? 'Ready to Update!' : 'Ready to Send!'}
-          </h2>
-          <p className="text-gray-400 mb-6 max-w-md mx-auto">
-            {isEditMode 
-              ? 'Your envelope has been updated. You can send it now or make further changes.'
-              : 'Your document has been uploaded and the envelope is ready. Send it now to start the signing process.'
-            }
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 max-w-2xl mx-auto">
-            <div className="text-center p-4 bg-gray-800/50 rounded-lg">
-              <FileText className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-              <p className="text-white font-medium text-sm truncate">{createdDocument?.title}</p>
-              <p className="text-gray-400 text-xs">Document</p>
-            </div>
-            <div className="text-center p-4 bg-gray-800/50 rounded-lg">
-              <Users className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <p className="text-white font-medium">{formData.signers.length}</p>
-              <p className="text-gray-400 text-xs">Signers</p>
-            </div>
-            <div className="text-center p-4 bg-gray-800/50 rounded-lg">
-              <Square className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-              <p className="text-white font-medium">{signatureFields.length}</p>
-              <p className="text-gray-400 text-xs">Fields</p>
-            </div>
-            <div className="text-center p-4 bg-gray-800/50 rounded-lg">
-              <Calendar className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-              <p className="text-white font-medium">{formData.expirationDays}d</p>
-              <p className="text-gray-400 text-xs">Expires In</p>
-            </div>
-          </div>
-
-          {signedSigners > 0 && (
-            <div className="mb-6 p-4 bg-yellow-900/20 rounded-lg border border-yellow-800/50 max-w-md mx-auto">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <div className="text-left">
-                  <p className="text-yellow-300 font-medium">Cannot Resend</p>
-                  <p className="text-yellow-400 text-sm">
-                    {signedSigners} signer{signedSigners !== 1 ? 's have' : ' has'} already signed. 
-                    You cannot resend the envelope.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Button
-              variant="outline"
-              onClick={() => setStep(2)}
-            >
-              <Edit className="w-4 h-4" />
-              Edit Signers & Fields
-            </Button>
-            
-            {canSend && (
-              <Button
-                onClick={handleSendEnvelope}
-                variant="success"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    {isEditMode ? 'Resend to Signers' : 'Send to Signers'}
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          {!canSend && isEditMode && (
-            <p className="text-gray-400 text-sm mt-4 max-w-md mx-auto">
-              The envelope has already been sent and some signers have signed. 
-              You can still edit unsigned signers and fields by going back.
-            </p>
-          )}
-        </div>
-      </Card>
-    );
-  };
-
-  // ===============================
-  // 🎯 Main Render
-  // ===============================
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-400">Loading document...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const pageTitle = isEditMode ? 'Edit Document' : 'Create Document';
+  // Enhanced rendering functions...
+  // [Previous rendering functions remain largely the same but enhanced with new features]
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
+      {/* Enhanced Header */}
+      <header className="border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/documents')}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
+              <Tooltip content="Back to Documents" position="bottom">
+                <button
+                  onClick={() => navigate('/documents')}
+                  className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              </Tooltip>
               <div>
-                <h1 className="text-xl font-bold text-white">{pageTitle}</h1>
+                <h1 className="text-xl font-bold text-white">
+                  {isEditMode ? 'Edit Document' : 'Create Document'}
+                </h1>
                 <p className="text-gray-400 text-sm">
-                  {step === 1 && (isEditMode ? 'Document details' : 'Upload your PDF document')}
-                  {step === 2 && 'Manage signers and place signature fields'}
-                  {step === 3 && 'Review and send'}
+                  {step === 1 && (isEditMode ? 'Update document details' : 'Upload your PDF document to get started')}
+                  {step === 2 && 'Configure signers and place signature fields precisely where needed'}
+                  {step === 3 && 'Review all settings and send for signing'}
                 </p>
               </div>
             </div>
@@ -1538,7 +1649,7 @@ export default function CreateDocumentPage() {
               {step === 2 && (
                 <Button
                   onClick={handleCreateEnvelope}
-                  disabled={isSubmitting || signatureFields.length === 0}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
@@ -1556,36 +1667,36 @@ export default function CreateDocumentPage() {
             </div>
           </div>
 
-          {/* Progress Steps */}
+          {/* Enhanced Progress Steps */}
           <div className="flex items-center justify-center mt-6">
             <div className="flex items-center">
               {[
-                { number: 1, label: isEditMode ? 'Document' : 'Upload' },
-                { number: 2, label: 'Signers & Fields' },
-                { number: 3, label: isEditMode ? 'Update' : 'Send' }
+                { number: 1, label: isEditMode ? 'Document' : 'Upload', icon: Upload },
+                { number: 2, label: 'Signers & Fields', icon: Users },
+                { number: 3, label: isEditMode ? 'Update' : 'Send', icon: Send }
               ].map((stepInfo, index) => (
                 <div key={stepInfo.number} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       step >= stepInfo.number
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
                         : 'bg-gray-700 text-gray-400'
                     }`}
                   >
                     {step >= stepInfo.number ? (
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="w-5 h-5" />
                     ) : (
-                      stepInfo.number
+                      <stepInfo.icon className="w-5 h-5" />
                     )}
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
+                  <span className={`ml-3 text-sm font-medium ${
                     step >= stepInfo.number ? 'text-white' : 'text-gray-400'
                   }`}>
                     {stepInfo.label}
                   </span>
                   {index < 2 && (
                     <div
-                      className={`w-16 h-1 mx-4 transition-all ${
+                      className={`w-20 h-1 mx-6 transition-all ${
                         step > stepInfo.number ? 'bg-blue-600' : 'bg-gray-700'
                       }`}
                     />
@@ -1598,32 +1709,383 @@ export default function CreateDocumentPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Enhanced Notifications */}
         {error && (
-          <div className="mb-6 p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
+          <div className="mb-6 p-4 bg-red-900/20 border border-red-800/50 rounded-lg animate-in slide-in-from-top duration-500">
             <div className="flex items-center gap-3 text-red-400">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p>{error}</p>
+              <p className="flex-1">{error}</p>
+              <button
+                onClick={() => setError('')}
+                className="p-1 hover:bg-red-800/30 rounded transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-900/20 border border-green-800/50 rounded-lg animate-in slide-in-from-top duration-500">
+            <div className="flex items-center gap-3 text-green-400">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="flex-1">{success}</p>
+              <button
+                onClick={() => setSuccess('')}
+                className="p-1 hover:bg-green-800/30 rounded transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Left Column - Form */}
+          {/* Left Column - Enhanced Form */}
           <div className="xl:col-span-2 space-y-6">
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
+            {step === 1 && (
+              <Card>
+                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-blue-400" />
+                  {isEditMode ? 'Update Document' : 'Upload Document'}
+                </h2>
+                
+                <div className="space-y-6">
+                  <Input
+                    label="Document Title"
+                    placeholder="e.g., Employment Agreement, NDA, Contract"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                    helper="Give your document a clear, descriptive name"
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      {isEditMode ? 'Update PDF Document (Optional)' : 'Upload PDF Document'}
+                    </label>
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-gray-500 transition-colors cursor-pointer bg-gray-800/20 hover:bg-gray-800/40"
+                    >
+                      <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-300 font-medium">
+                        {formData.file ? 'Document Ready for Processing' : 'Drop your PDF here or click to browse'}
+                      </p>
+                      <p className="text-gray-500 text-sm mt-1">
+                        Maximum file size: 25MB • Supports all PDF standards
+                      </p>
+                      {formData.file && (
+                        <p className="text-green-400 text-sm mt-2 flex items-center justify-center gap-1">
+                          <CheckCircle className="w-4 h-4" />
+                          {formData.file.name || 'Template loaded'} 
+                          {formData.file.size && ` (${(formData.file.size / (1024 * 1024)).toFixed(2)} MB)`}
+                        </p>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {isSubmitting && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm text-gray-400">
+                        <span>Processing document...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2.5">
+                        <div
+                          className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 shadow-lg shadow-blue-500/25"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-gray-500 text-xs">
+                        {uploadProgress < 100 ? 'Uploading and processing document...' : 'Finalizing document setup...'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {isEditMode && (
+                  <div className="mt-6 p-4 bg-blue-900/20 rounded-lg border border-blue-800/50">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="text-blue-300 font-medium">Editing Mode Active</p>
+                        <p className="text-blue-400 mt-1">
+                          You are editing an existing document. Uploading a new PDF will replace the current file and reset all signature field placements.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {step === 2 && (
+              <>
+                {/* Enhanced Signers Section */}
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-green-400" />
+                      Manage Signers
+                      <span className="text-sm text-gray-400 font-normal ml-2">
+                        ({formData.signers.length} signer{formData.signers.length !== 1 ? 's' : ''})
+                      </span>
+                    </h2>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddSigner}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Signer
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {formData.signers.map((signer, index) => (
+                      <SignerForm
+                        key={signer.id}
+                        signer={signer}
+                        index={index}
+                        onUpdate={(updated) => handleUpdateSigner(index, updated)}
+                        onRemove={() => handleRemoveSigner(index)}
+                        isLast={index === 0 && formData.signers.length === 1}
+                        isSigned={signer.status === 'SIGNED'}
+                        isCurrent={selectedSignerId === signer.id}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-4 p-4 bg-gray-800/30 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Signing Order:</span>
+                      <span className="text-white font-medium">
+                        {formData.signers.map(s => s.name || `Signer ${s.id}`).join(' → ')}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Enhanced Field Placement Section */}
+                <AdvancedPDFViewer
+                  file={formData.file}
+                  signers={formData.signers}
+                  signatureFields={signatureFields}
+                  onFieldAdd={handleAddSignatureField}
+                  onFieldUpdate={handleUpdateSignatureField}
+                  onFieldRemove={handleRemoveSignatureField}
+                  onFieldSelect={setSelectedFieldId}
+                  selectedSignerId={selectedSignerId}
+                  onSignerSelect={setSelectedSignerId}
+                  selectedFieldType={selectedFieldType}
+                  onFieldTypeSelect={setSelectedFieldType}
+                  selectedFieldId={selectedFieldId}
+                  mode="placement"
+                  className="min-h-[600px]"
+                />
+
+                {/* Enhanced Settings Section */}
+                <Card>
+                  <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-purple-400" />
+                    Advanced Settings
+                  </h2>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Select
+                      label="Expiration Period"
+                      value={formData.expirationDays}
+                      onChange={(e) => setFormData(prev => ({ ...prev, expirationDays: parseInt(e.target.value) }))}
+                      options={[
+                        { value: 3, label: '3 days - Urgent' },
+                        { value: 7, label: '7 days - Standard' },
+                        { value: 14, label: '14 days - Extended' },
+                        { value: 30, label: '30 days - Monthly' },
+                        { value: 60, label: '60 days - Quarterly' },
+                        { value: 90, label: '90 days - Annual' }
+                      ]}
+                      helper="How long signers have to complete signing"
+                    />
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Security Level
+                      </label>
+                      <select
+                        value={formData.requireAuthentication ? 'high' : 'standard'}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          requireAuthentication: e.target.value === 'high' 
+                        }))}
+                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      >
+                        <option value="standard">Standard Security</option>
+                        <option value="high">High Security (Email Verification)</option>
+                      </select>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {formData.requireAuthentication 
+                          ? 'Signers must verify their email before signing' 
+                          : 'Standard email invitation process'
+                        }
+                      </p>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Personal Message to Signers
+                      </label>
+                      <textarea
+                        value={formData.message}
+                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                        rows={4}
+                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                        placeholder="Add a personal message explaining the document and any special instructions for your signers..."
+                      />
+                      <p className="text-gray-500 text-sm mt-1">
+                        This message will be included in the signing invitation email
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 lg:col-span-2">
+                      <label className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.reminders}
+                          onChange={(e) => setFormData(prev => ({ ...prev, reminders: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                        />
+                        <Mail className="w-4 h-4 text-blue-400" />
+                        <div>
+                          <p className="text-white text-sm font-medium">Automatic Reminders</p>
+                          <p className="text-gray-400 text-xs">Send reminder emails every 3 days until signed</p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.allowDecline}
+                          onChange={(e) => setFormData(prev => ({ ...prev, allowDecline: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                        />
+                        <AlertCircle className="w-4 h-4 text-orange-400" />
+                        <div>
+                          <p className="text-white text-sm font-medium">Allow Signers to Decline</p>
+                          <p className="text-gray-400 text-xs">Signers can decline to sign with a reason</p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-3 border border-gray-700 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.enableAuditTrail}
+                          onChange={(e) => setFormData(prev => ({ ...prev, enableAuditTrail: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                        />
+                        <FileText className="w-4 h-4 text-green-400" />
+                        <div>
+                          <p className="text-white text-sm font-medium">Enable Audit Trail</p>
+                          <p className="text-gray-400 text-xs">Complete record of all signing activities</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+
+            {step === 3 && (
+              <Card>
+                <div className="text-center py-8">
+                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    {isEditMode ? 'Ready to Update!' : 'Ready to Send!'}
+                  </h2>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                    {isEditMode 
+                      ? 'Your envelope has been updated with all changes. You can send it now or make further adjustments.'
+                      : 'Your document is perfectly configured and ready for signing. Send it now to start the secure signing process.'
+                    }
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
+                    <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <FileText className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                      <p className="text-white font-medium text-sm truncate">{createdDocument?.title}</p>
+                      <p className="text-gray-400 text-xs">Document</p>
+                    </div>
+                    <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <Users className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                      <p className="text-white font-medium">{formData.signers.length}</p>
+                      <p className="text-gray-400 text-xs">Signers</p>
+                    </div>
+                    <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <Square className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                      <p className="text-white font-medium">{signatureFields.length}</p>
+                      <p className="text-gray-400 text-xs">Fields</p>
+                    </div>
+                    <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <Calendar className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                      <p className="text-white font-medium">{formData.expirationDays}d</p>
+                      <p className="text-gray-400 text-xs">Expires</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep(2)}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Signers & Fields
+                    </Button>
+                    
+                    <Button
+                      onClick={handleSendEnvelope}
+                      variant="success"
+                      disabled={isSubmitting}
+                      size="lg"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          {isEditMode ? 'Resend to Signers' : 'Send to Signers'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
 
-          {/* Right Column - Preview & Summary */}
+          {/* Enhanced Right Column - Advanced Preview & Summary */}
           <div className="space-y-6">
-            {/* Quick Stats */}
+            {/* Enhanced Quick Stats */}
             <Card>
-              <h3 className="font-semibold text-white mb-4">Process Summary</h3>
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-400" />
+                Process Summary
+              </h3>
               <div className="space-y-3">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-400">Document</span>
-                  <span className="text-white truncate">{createdDocument?.title || formData.title || 'Not uploaded'}</span>
+                  <span className="text-white truncate max-w-[120px]" title={createdDocument?.title || formData.title}>
+                    {createdDocument?.title || formData.title || 'Not uploaded'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Total Signers</span>
@@ -1634,6 +2096,10 @@ export default function CreateDocumentPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Signature Fields</span>
                       <span className="text-white">{signatureFields.length} placed</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Pages with Fields</span>
+                      <span className="text-white">{Object.keys(fieldStats.byPage).length} pages</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Expires In</span>
@@ -1652,27 +2118,110 @@ export default function CreateDocumentPage() {
               </div>
             </Card>
 
-            {/* Field Types Legend */}
+            {/* Enhanced Field Management */}
             {step >= 2 && (
               <Card>
-                <h3 className="font-semibold text-white mb-4">Field Types</h3>
-                <div className="space-y-2">
-                  {[
-                    { type: 'SIGNATURE', label: 'Signature', color: 'bg-blue-500' },
-                    { type: 'INITIALS', label: 'Initials', color: 'bg-green-500' },
-                    { type: 'DATE', label: 'Date', color: 'bg-purple-500' },
-                    { type: 'TEXT', label: 'Text', color: 'bg-orange-500' }
-                  ].map(({ type, label, color }) => (
-                    <div key={type} className="flex items-center gap-3 text-sm">
-                      <div className={`w-3 h-3 rounded ${color}`} />
-                      <span className="text-gray-300">{label}</span>
+                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                  <Square className="w-4 h-4 text-purple-400" />
+                  Field Management
+                </h3>
+                
+                <div className="space-y-3">
+                  {/* Field Actions */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Tooltip content="Undo Last Change" position="top">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={undoFieldChange}
+                        disabled={historyIndex <= 0}
+                        className="w-full justify-center"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    </Tooltip>
+                    
+                    <Tooltip content="Redo Change" position="top">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={redoFieldChange}
+                        disabled={historyIndex >= fieldHistory.length - 1}
+                        className="w-full justify-center"
+                      >
+                        <RotateCcw className="w-3 h-3 transform rotate-180" />
+                      </Button>
+                    </Tooltip>
+                  </div>
+
+                  {selectedFieldId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDuplicateField(selectedFieldId)}
+                      className="w-full justify-center"
+                    >
+                      <Copy className="w-3 h-3" />
+                      Duplicate Selected Field
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleClearAllFields}
+                    disabled={signatureFields.length === 0}
+                    className="w-full justify-center"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear All Fields
+                  </Button>
+                </div>
+
+                {/* Field Statistics */}
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-300 mb-2">Field Distribution</h4>
+                  <div className="space-y-2">
+                    {Object.entries(fieldStats.byType).map(([type, count]) => {
+                      const config = fieldTypes[type];
+                      return (
+                        <div key={type} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded ${config.color.split(' ')[1]}`} />
+                            <span className="text-gray-300">{config.label}</span>
+                          </div>
+                          <span className="text-white font-medium">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Enhanced Field Types Legend */}
+            {step >= 2 && (
+              <Card>
+                <h3 className="font-semibold text-white mb-4">Field Types Guide</h3>
+                <div className="space-y-3">
+                  {Object.entries(fieldTypes).map(([type, config]) => (
+                    <div key={type} className="flex items-center gap-3 text-sm p-2 rounded-lg bg-gray-800/30">
+                      <div className={`w-8 h-8 rounded flex items-center justify-center ${config.color} border`}>
+                        <config.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{config.label}</p>
+                        <p className="text-gray-400 text-xs">
+                          {config.defaultWidth}×{config.defaultHeight}px default
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </Card>
             )}
 
-            {/* Quick Actions */}
+            {/* Enhanced Quick Actions */}
             {step >= 2 && (
               <Card>
                 <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
@@ -1683,22 +2232,75 @@ export default function CreateDocumentPage() {
                     onClick={() => {
                       setSelectedSignerId(formData.signers[0]?.id || null);
                       setSelectedFieldType('SIGNATURE');
+                      setSelectedFieldId(null);
                     }}
                     className="w-full justify-center"
                   >
-                    <Square className="w-4 h-4" />
+                    <MousePointer className="w-3 h-3" />
                     Reset Field Placement
                   </Button>
+                  
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setSignatureFields([])}
-                    disabled={signatureFields.length === 0}
+                    onClick={() => {
+                      // Auto-place common fields
+                      const commonFields = [
+                        { type: 'SIGNATURE', x: 100, y: 100 },
+                        { type: 'DATE', x: 100, y: 180 },
+                        { type: 'NAME', x: 100, y: 260 }
+                      ];
+                      
+                      commonFields.forEach(field => {
+                        if (selectedSignerId) {
+                          handleAddSignatureField({
+                            ...field,
+                            signerId: selectedSignerId,
+                            pageNumber: 1,
+                            width: fieldTypes[field.type].defaultWidth,
+                            height: fieldTypes[field.type].defaultHeight
+                          });
+                        }
+                      });
+                    }}
+                    disabled={!selectedSignerId}
                     className="w-full justify-center"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    Clear All Fields
+                    <Square className="w-3 h-3" />
+                    Auto-Place Common Fields
                   </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Enhanced Tips & Best Practices */}
+            {step >= 2 && (
+              <Card>
+                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-blue-400" />
+                  Pro Tips
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-800/50">
+                    <p className="text-blue-300 font-medium">Field Placement</p>
+                    <p className="text-blue-400 text-xs mt-1">
+                      Place fields in clear, designated areas. Use the grid for precise alignment.
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-green-900/20 rounded-lg border border-green-800/50">
+                    <p className="text-green-300 font-medium">Signer Experience</p>
+                    <p className="text-green-400 text-xs mt-1">
+                      Ensure each signer has all required fields. Test the flow before sending.
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-purple-900/20 rounded-lg border border-purple-800/50">
+                    <p className="text-purple-300 font-medium">Legal Compliance</p>
+                    <p className="text-purple-400 text-xs mt-1">
+                      Include date fields and enable audit trail for legal documents.
+                    </p>
+                  </div>
                 </div>
               </Card>
             )}

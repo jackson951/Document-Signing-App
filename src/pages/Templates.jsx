@@ -5,7 +5,7 @@ import {
   FileText, Plus, Upload, Search, Filter, Users, Download, 
   Eye, Edit, Trash2, Copy, Star, Building, Clock, CheckCircle,
   ArrowRight, FolderOpen, Shield, Zap, LayoutTemplate, X,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, CreditCard, Lock, AlertTriangle
 } from 'lucide-react';
 
 // ===============================
@@ -45,7 +45,8 @@ const Badge = ({ children, variant = 'default' }) => {
     success: 'bg-green-900/30 text-green-400 border border-green-800/50',
     warning: 'bg-yellow-900/30 text-yellow-400 border border-yellow-800/50',
     info: 'bg-blue-900/30 text-blue-400 border border-blue-800/50',
-    purple: 'bg-purple-900/30 text-purple-400 border border-purple-800/50'
+    purple: 'bg-purple-900/30 text-purple-400 border border-purple-800/50',
+    danger: 'bg-red-900/30 text-red-400 border border-red-800/50'
   };
   
   return (
@@ -78,17 +79,165 @@ const SkeletonLoader = () => (
   </div>
 );
 
-const ErrorDisplay = ({ message, onRetry }) => (
-  <Card className="text-center py-16">
-    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-    <h3 className="text-xl font-semibold text-white mb-2">Failed to Load Templates</h3>
-    <p className="text-gray-400 mb-6 max-w-md mx-auto">{message}</p>
-    <Button onClick={onRetry} variant="outline">
-      <RefreshCw className="w-4 h-4" />
-      Try Again
-    </Button>
-  </Card>
-);
+// ===============================
+// 🚨 Enhanced Error Display Components
+// ===============================
+
+const ErrorDisplay = ({ error, onRetry }) => {
+  // Determine error type and appropriate UI
+  const getErrorConfig = () => {
+    if (!error) return null;
+
+    // Check for subscription errors (402 status)
+    if (error.status === 402 || error.detail?.includes('subscription') || error.title?.includes('Payment Required')) {
+      return {
+        icon: CreditCard,
+        title: 'Subscription Required',
+        message: error.detail || 'Your organization does not have an active subscription to access templates.',
+        variant: 'warning',
+        actions: [
+          {
+            label: 'Upgrade Plan',
+            variant: 'primary',
+            onClick: () =>window.location.href = '/subscription'
+          },
+          {
+            label: 'Contact Support',
+            variant: 'outline', 
+            onClick: () => window.open('mailto:support@docsign.com', '_blank')
+          }
+        ]
+      };
+    }
+
+    // Check for authentication errors (401 status)
+    if (error.status === 401 || error.detail?.includes('authentication') || error.detail?.includes('log in')) {
+      return {
+        icon: Lock,
+        title: 'Authentication Required',
+        message: error.detail || 'Please log in again to access templates.',
+        variant: 'danger',
+        actions: [
+          {
+            label: 'Log In Again',
+            variant: 'primary',
+            onClick: () => {
+              localStorage.removeItem('token');
+              window.location.href = '/login';
+            }
+          }
+        ]
+      };
+    }
+
+    // Check for permission errors (403 status)
+    if (error.status === 403) {
+      return {
+        icon: AlertTriangle,
+        title: 'Access Denied',
+        message: error.detail || 'You do not have permission to access templates.',
+        variant: 'danger',
+        actions: [
+          {
+            label: 'Request Access',
+            variant: 'outline',
+            onClick: () => window.open('mailto:admin@yourcompany.com', '_blank')
+          }
+        ]
+      };
+    }
+
+    // Generic server errors (500 status)
+    if (error.status >= 500) {
+      return {
+        icon: AlertCircle,
+        title: 'Server Error',
+        message: error.detail || 'Our servers are experiencing issues. Please try again later.',
+        variant: 'danger',
+        actions: [
+          {
+            label: 'Try Again',
+            variant: 'primary',
+            onClick: onRetry
+          },
+          {
+            label: 'Check Status',
+            variant: 'outline',
+            onClick: () => window.open('/status', '_blank')
+          }
+        ]
+      };
+    }
+
+    // Network or other errors
+    return {
+      icon: AlertCircle,
+      title: 'Failed to Load Templates',
+      message: error.detail || error.message || 'Unable to connect to the server. Please check your connection.',
+      variant: 'danger',
+      actions: [
+        {
+          label: 'Try Again',
+          variant: 'primary',
+          onClick: onRetry
+        },
+        {
+          label: 'Check Connection',
+          variant: 'outline',
+          onClick: () => window.location.reload()
+        }
+      ]
+    };
+  };
+
+  const errorConfig = getErrorConfig();
+  if (!errorConfig) return null;
+
+  const ErrorIcon = errorConfig.icon;
+
+  return (
+    <Card className="text-center py-16">
+      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+        errorConfig.variant === 'warning' ? 'bg-yellow-900/20 text-yellow-400' :
+        errorConfig.variant === 'danger' ? 'bg-red-900/20 text-red-400' :
+        'bg-blue-900/20 text-blue-400'
+      }`}>
+        <ErrorIcon className="w-8 h-8" />
+      </div>
+      
+      <h3 className="text-xl font-semibold text-white mb-2">{errorConfig.title}</h3>
+      <p className="text-gray-400 mb-6 max-w-md mx-auto">{errorConfig.message}</p>
+      
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        {errorConfig.actions.map((action, index) => (
+          <Button
+            key={index}
+            variant={action.variant}
+            onClick={action.onClick}
+            className="min-w-32 justify-center"
+          >
+            {action.label}
+          </Button>
+        ))}
+        {onRetry && !errorConfig.actions.some(action => action.label === 'Try Again') && (
+          <Button variant="outline" onClick={onRetry} className="min-w-32 justify-center">
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </Button>
+        )}
+      </div>
+
+      {/* Show error details in development */}
+      {process.env.NODE_ENV === 'development' && error.rawError && (
+        <div className="mt-6 p-4 bg-gray-900 rounded-lg border border-gray-700 text-left">
+          <p className="text-gray-400 text-sm font-mono break-all">
+            Debug: {JSON.stringify(error.rawError)}
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+};
 
 // ===============================
 // 📄 Template Card Components
@@ -455,24 +604,28 @@ export default function TemplatesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editName, setEditName] = useState('');
 
   // ===============================
-  // 📥 Fetch Templates
+  // 📥 Enhanced Fetch Templates with Better Error Handling
   // ===============================
 
   const fetchTemplates = async () => {
     try {
       setIsLoading(true);
-      setError('');
+      setError(null);
       const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY;
       const token = localStorage.getItem('token');
 
       if (!token && !apiKey) {
-        throw new Error('Authentication required. Please log in again.');
+        throw { 
+          status: 401, 
+          detail: 'Authentication required. Please log in again.',
+          rawError: 'No authentication tokens found'
+        };
       }
 
       const response = await fetch('http://localhost:3000/api/v1/templates', {
@@ -483,25 +636,56 @@ export default function TemplatesPage() {
         },
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        throw new Error(`Failed to fetch templates: ${response.status}`);
+        // Handle different error status codes with proper error objects
+        const errorMap = {
+          401: {
+            status: 401,
+            title: 'Unauthorized',
+            detail: responseData.detail || 'Authentication failed. Please log in again.'
+          },
+          402: {
+            status: 402,
+            title: responseData.title || 'Payment Required',
+            detail: responseData.detail || 'Your organization does not have an active subscription.'
+          },
+          403: {
+            status: 403,
+            title: 'Forbidden',
+            detail: responseData.detail || 'You do not have permission to access templates.'
+          },
+          500: {
+            status: 500,
+            title: 'Server Error',
+            detail: responseData.detail || 'Internal server error. Please try again later.'
+          }
+        };
+
+        throw errorMap[response.status] || {
+          status: response.status,
+          title: responseData.title || 'Request Failed',
+          detail: responseData.detail || `Failed to fetch templates: ${response.statusText}`,
+          rawError: responseData
+        };
       }
 
-      const fetchedTemplates = await response.json();
+      const fetchedTemplates = responseData;
       
       // Mark templates as custom or predefined based on organization
       const processedTemplates = fetchedTemplates.map(template => ({
         ...template,
-        isCustom: !template.organization.name==="DocSign Dev Team" // Simple heuristic - adjust based on your backend
+        isCustom: template.organization && template.organization.name !== "DocSign Dev Team"
       }));
 
       setTemplates(processedTemplates);
     } catch (error) {
       console.error('Error fetching templates:', error);
-      setError(error.message || 'Failed to load templates. Please try again.');
+      setError({
+        ...error,
+        rawError: error.rawError || error
+      });
     } finally {
       setIsLoading(false);
     }
@@ -512,7 +696,7 @@ export default function TemplatesPage() {
   }, []);
 
   // ===============================
-  // 🧩 Action Handlers
+  // 🧩 Enhanced Action Handlers with Error Handling
   // ===============================
 
   const handleCreateTemplate = async (templateData) => {
@@ -523,24 +707,35 @@ export default function TemplatesPage() {
     formData.append('file', templateData.file);
     formData.append('name', templateData.name);
 
-    const response = await fetch('http://localhost:3000/api/v1/templates', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'x-api-key': apiKey,
-      },
-      body: formData,
-    });
+    try {
+      const response = await fetch('http://localhost:3000/api/v1/templates', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-api-key': apiKey,
+        },
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || 'Failed to create template');
+      const responseData = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          title: responseData.title || 'Create Failed',
+          detail: responseData.detail || 'Failed to create template',
+          rawError: responseData
+        };
+      }
+
+      const newTemplate = await response.json();
+      // Refetch to get all templates with proper organization data
+      await fetchTemplates();
+      return newTemplate;
+    } catch (error) {
+      console.error('Error creating template:', error);
+      throw new Error(error.detail || 'Failed to create template');
     }
-
-    const newTemplate = await response.json();
-    // Refetch to get all templates with proper organization data
-    await fetchTemplates();
-    return newTemplate;
   };
 
   const handleUseTemplate = (template) => {
@@ -584,16 +779,22 @@ export default function TemplatesPage() {
         body: JSON.stringify({ name: editName }),
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to update template');
+        throw {
+          status: response.status,
+          title: responseData.title || 'Update Failed',
+          detail: responseData.detail || 'Failed to update template',
+          rawError: responseData
+        };
       }
 
       await fetchTemplates(); // Refetch to get updated data
       setEditingTemplate(null);
     } catch (error) {
       console.error('Error updating template:', error);
-      alert(error.message || 'Failed to update template');
+      alert(error.detail || 'Failed to update template');
     }
   };
 
@@ -614,15 +815,21 @@ export default function TemplatesPage() {
         },
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to delete template');
+        throw {
+          status: response.status,
+          title: responseData.title || 'Delete Failed',
+          detail: responseData.detail || 'Failed to delete template',
+          rawError: responseData
+        };
       }
 
       await fetchTemplates(); // Refetch to get updated data
     } catch (error) {
       console.error('Error deleting template:', error);
-      alert(error.message || 'Failed to delete template');
+      alert(error.detail || 'Failed to delete template');
     }
   };
 
@@ -677,6 +884,7 @@ export default function TemplatesPage() {
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
                 variant="primary"
+                disabled={error && error.status === 402} // Disable if subscription required
               >
                 <Plus className="w-4 h-4" />
                 New Template
@@ -684,44 +892,63 @@ export default function TemplatesPage() {
             </div>
           </div>
 
-          {/* Tabs & Search */}
-          <FilterSection
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            templates={templates}
-          />
+          {/* Show subscription warning banner if needed */}
+          {error && error.status === 402 && (
+            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-5 h-5 text-yellow-400" />
+                <div>
+                  <p className="text-yellow-300 font-medium">Subscription Required</p>
+                  <p className="text-yellow-400 text-sm">
+                    Upgrade your plan to create and manage templates.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tabs & Search - Only show if no critical errors */}
+          {!error || (error.status !== 401 && error.status !== 402 && error.status !== 403) && (
+            <FilterSection
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              templates={templates}
+            />
+          )}
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-          <Card className="text-center hover:bg-gray-800/70 transition-colors">
-            <LayoutTemplate className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{templates.length}</p>
-            <p className="text-gray-400 text-sm">Total Templates</p>
-          </Card>
-          
-          <Card className="text-center hover:bg-gray-800/70 transition-colors">
-            <Building className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{customTemplatesCount}</p>
-            <p className="text-gray-400 text-sm">Your Templates</p>
-          </Card>
-          
-          <Card className="text-center hover:bg-gray-800/70 transition-colors">
-            <Shield className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{predefinedTemplatesCount}</p>
-            <p className="text-gray-400 text-sm">DocSign Templates</p>
-          </Card>
-        </div>
+        {/* Stats Overview - Only show if no errors */}
+        {!error && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+            <Card className="text-center hover:bg-gray-800/70 transition-colors">
+              <LayoutTemplate className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white">{templates.length}</p>
+              <p className="text-gray-400 text-sm">Total Templates</p>
+            </Card>
+            
+            <Card className="text-center hover:bg-gray-800/70 transition-colors">
+              <Building className="w-8 h-8 text-green-400 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white">{customTemplatesCount}</p>
+              <p className="text-gray-400 text-sm">Your Templates</p>
+            </Card>
+            
+            <Card className="text-center hover:bg-gray-800/70 transition-colors">
+              <Shield className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-white">{predefinedTemplatesCount}</p>
+              <p className="text-gray-400 text-sm">DocSign Templates</p>
+            </Card>
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
           <SkeletonLoader />
         ) : error ? (
-          <ErrorDisplay message={error} onRetry={fetchTemplates} />
+          <ErrorDisplay error={error} onRetry={fetchTemplates} />
         ) : displayedTemplates.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayedTemplates.map(template => (
